@@ -89,7 +89,9 @@ DATABASES = {
 }
 
 AUTHENTICATION_BACKENDS = [
-    'users.backends.CustomUserBackend',  # Update this to the correct path  # Keep this if you want to use Django's User model as well
+    'django.contrib.auth.backends.ModelBackend',
+    'users.backends.CustomUserBackend',
+    'users.backends.CustomAdminBackend',  # Update this to the correct path  # Keep this if you want to use Django's User model as well
 ]
 
 # Password validation
@@ -143,4 +145,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/login/'  # URL for login
 LOGIN_REDIRECT_URL = '/accounts/mainlogin/'  # Redirect after login
+
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 

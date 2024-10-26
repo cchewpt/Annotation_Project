@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.hashers import check_password
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager,AbstractBaseUser
 from django.contrib.auth.models import User
 import bcrypt
 import uuid
@@ -20,15 +20,25 @@ class user_map(models.Model):
         db_table = 'user'  # กำหนดชื่อตารางเป็น 'user'
         managed = True
 
+class UserManager(BaseUserManager):
+    def create_user(self, username, password=None, **extra_fields):
+        if not username:
+            raise ValueError("The Username must be set")
+        user = self.model(username=username, **extra_fields)
+        user.set_password(password)  # Use set_password to hash the password
+        user.save(using=self._db)
+        return user
+
 class Users(models.Model):
     user_id = models.CharField(max_length=10, unique=True, primary_key=True, db_column='user_id')
     username = models.CharField(max_length=150, unique=True, db_column='user_username')
     password = models.CharField(max_length=255, db_column='user_pwd')
     last_login = models.DateTimeField(null=True, blank=True, db_column='last_login')
     email = models.EmailField(max_length=255, unique=True, db_column='user_email')
-    tel = models.CharField(max_length=10,db_column='user_tel')
-    user_fname = models.CharField(max_length=50,db_column='user_fname')
-    user_lname = models.CharField(max_length=50,db_column='user_lname')
+    tel = models.CharField(max_length=10, db_column='user_tel')
+    user_fname = models.CharField(max_length=50, db_column='user_fname')
+    user_role = models.CharField(max_length=10, db_column='user_role')
+    user_lname = models.CharField(max_length=50, db_column='user_lname')
 
     class Meta:
         db_table = 'user'  # Use your actual table name in MySQL
@@ -36,7 +46,7 @@ class Users(models.Model):
 
     @property
     def is_authenticated(self):
-        return True  # Custom implementation for your Users model
+        return True  # Indicate that the user is authenticated
 
     def set_password(self, raw_password):
         self.password = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -46,6 +56,38 @@ class Users(models.Model):
 
     def __str__(self):
         return self.username
+
+
+class Admins(models.Model):
+    admin_id = models.CharField(max_length=10, unique=True, primary_key=True, db_column='admin_id')
+    admin_username = models.CharField(max_length=150, unique=True, db_column='admin_username')  # Changed field name
+    admin_pwd = models.CharField(max_length=255, db_column='admin_pwd')  # Ensure the field name matches
+    last_login = models.DateTimeField(null=True, blank=True, db_column='last_login')
+    admin_email = models.EmailField(max_length=255, unique=True, db_column='admin_email')
+    admin_tel = models.CharField(max_length=10, db_column='admin_tel')
+    admin_name = models.CharField(max_length=50, db_column='admin_fname')
+    admin_role = models.CharField(max_length=10, db_column='admin_role')
+    admin_lname = models.CharField(max_length=50, db_column='admin_lname')
+
+    class Meta:
+        db_table = 'admin'  # Use your actual table name in MySQL
+        managed = False
+
+    @property
+    def is_authenticated(self):
+        return True  # Indicate that the admin is authenticated
+
+    def set_password(self, raw_password):
+        self.admin_pwd = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    def check_password(self, raw_password):
+        is_correct = bcrypt.checkpw(raw_password.encode('utf-8'), self.admin_pwd.encode('utf-8'))  # Update to admin_pwd
+        print(f"Checking password for {self.admin_username}: {raw_password} -> {is_correct}")
+        return is_correct
+
+    def __str__(self):
+        return self.admin_username
+
     
 
 class ProposedText(models.Model):

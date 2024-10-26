@@ -4,7 +4,7 @@ from django.db import connection
 from django.contrib.auth import login as auth_login
 from django.contrib import messages
 from io import TextIOWrapper
-from .models import user_map, Users, ProposedText, ProposedFile
+from .models import user_map, Users, ProposedText, ProposedFile,Admins
 import bcrypt  # Import bcrypt for password hashing
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.decorators import login_required
@@ -21,6 +21,8 @@ import xml.etree.ElementTree as ET
 from django.core.files.storage import FileSystemStorage
 from django.contrib.auth import get_user
 from django.db import models
+import random
+from django.contrib.auth.backends import BaseBackend
 
 
 
@@ -92,9 +94,10 @@ def user_profile(request):
         return redirect('login')
 
 
-def login_view(request):
-    msg = None
+from django.contrib.auth import authenticate, login as auth_login
+from .models import Users, Admins
 
+def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -102,34 +105,52 @@ def login_view(request):
         print(f"Attempting login for username: {username}")
 
         if not username or not password:
-            msg = "Both fields are required."
-            return render(request, 'login.html', {'error_message': msg})
+            return render(request, 'login.html', {'error_message': "Both fields are required."})
 
-        # Specify the backend to use
+        # Authenticate Users
         user = authenticate(request, username=username, password=password, backend='users.backends.CustomUserBackend')
+        if user is not None and isinstance(user, Users):
+            print("User logged in successfully")
+            auth_login(request, user)
+            return redirect('accounts/mainlogin')
+        
+        # Authenticate Admins
+        admin = authenticate(request, username=username, password=password, backend='users.backends.CustomAdminBackend')
+        if admin is not None and isinstance(admin, Admins):
+            print("Admin logged in successfully")
+            auth_login(request, admin)
+            return redirect('accounts/mainlogin')
 
-        if user is not None:
-            user.last_login = timezone.now()  # Update last_login
-            user.save()  # Save the user instance with the updated last_login
-            login(request, user)  # Log the user in
-            return redirect('accounts/mainlogin')  # Redirect to your desired page
-        else:
-            print("Invalid username or password.")
-            msg = "Invalid username or password."
+        print("Invalid username or password.")
+        return render(request, 'login.html', {'error_message': "Invalid username or password."})
 
-        return render(request, 'login.html', {'error_message': msg})
+    return render(request, 'login.html')  # Return the login page if the request is GET
 
-    return render(request, 'login.html', {'msg': msg})
+
+    
+
 
 
 def mainlogin(request):
-    if request.user.is_authenticated:  # This works if you add is_authenticated property in Users model
-        print(f"Authenticated user: {request.user.username}")  # Debugging line
-        return render(request, 'accounts/mainlogin.html', {
-            'username': request.user.username,
-        })
-    else:
-        return redirect('login')  # Redirect to login page if not authenticated
+    # Debugging statement to check if the user is authenticated
+    print(f"User session set: {request.user.is_authenticated}")
+    print("Checking authentication for user.")
+    
+    if request.user.is_authenticated:
+        # Check if the user is an instance of Users or Admins
+        if isinstance(request.user, Users):
+            print(f"Authenticated user: {request.user.username}")  # Debugging line
+            return render(request, 'accounts/mainlogin.html', {
+                'username': request.user.username,
+            })
+        elif isinstance(request.user, Admins):
+            print(f"Authenticated admin: {request.user.admin_username}")  # Debugging line
+            return render(request, 'accounts/mainlogin.html', {
+                'username': request.user.admin_username,
+            })
+    
+    print("User is not authenticated. Redirecting to login.")  # Debugging line
+    return redirect('login')  # Redirect to login page if not authenticated
 
 def annotatepage(request):
     return render(request, 'annotatepage.html')
@@ -402,8 +423,8 @@ def registration(request):
         # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-        # Save the new user entry with the hashed password
-        new_entry = user_map(
+        # Create a new user entry using the 'create' method
+        user_map.objects.create(
             user_id=user_id,
             username=username,
             email=email,
@@ -411,7 +432,7 @@ def registration(request):
             tel=tel,
             user_role="user"
         )
-        new_entry.save()
+        
         return render(request, 'registration.html', {
             'error_message': None,
             'success_message': "สมัครสมาชิกเรียบร้อยแล้ว"
@@ -424,12 +445,10 @@ def registration(request):
 
 
 def generate_user_id():
-    # นับจำนวนผู้ใช้ทั้งหมดที่มีอยู่แล้ว
-    count = user_map.objects.count() + 1  # ลำดับที่ 1, 2, 3, ...
-    
-    # สร้างเลข user_id โดยต่อเลข 164 กับลำดับที่มีความยาว 7 หลัก
-    user_id = f"164{count:07d}"  # เช่น 1640000001, 1640000002
-    return user_id
+    while True:
+        new_id = '164' + str(random.randint(1000000, 9999999))  # Generate a random ID with '164' prefix
+        if not user_map.objects.filter(user_id=new_id).exists():  # Check if it exists
+            return new_id
 
 def generate_text_id():
     count = ProposedText.objects.count() + 1  # Start counting from 1
