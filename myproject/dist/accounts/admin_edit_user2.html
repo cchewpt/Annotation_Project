@@ -11,7 +11,7 @@
     <meta name="author" content="" />
     <title>ระบบการกำกับข้อความเชิงบูลลี่ภาษาไทย</title>
     <!-- Favicon-->
-    <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
+    <link rel="icon" type="image/x-icon" href="{% static 'assets/favicon.ico' %}" />
     <!-- Custom Google font-->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,14 +57,21 @@
         </ul>
           <div class="user-profile-box m-lg-0 py-1">
             <div class="d-inline-flex align-items-center">
-                <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
-                    style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
-                    onclick="location.href='{% url 'user_profile' %}';" />
-          
-                <div class="d-md-flex flex-column">
-                    <span class="fw-medium" style="color: black; cursor: pointer">ชื่อผู้ใช้: {{ username }}</span>
-                    <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
-                </div>
+              <img
+                src="{% static 'assets/profile-placeholder.png' %}"
+                alt="User Picture"
+                style="width: 40px; height: 40px; cursor: pointer"
+                class="rounded-circle me-2"
+                onclick="location.href='{% url 'admin_edit_profile' %}';"
+              />
+              <div class="d-md-flex flex-column">
+                <span class="fw-medium" style="color: black; cursor: pointer"
+                  >ชื่อผู้ใช้: {{admin_username}}</span
+                >
+                <a href="#" class="d-block fw-semibold text-danger"
+                  >ออกจากระบบ</a
+                >
+              </div>
             </div>
           </div>
         </div>
@@ -86,49 +93,66 @@
               </div>
               <div class="d-md-flex flex-column offset-1">
                 <span class="fw-medium text-white" style="color: black"
-                  >ชื่อผู้ใช้: {{ username }}</span
+                  >ชื่อผู้ใช้: {{admin_username}}</span
                 >
                 <span class="fw-medium text-white" style="color: black"
-                  >รหัสผู้ใช้: {{ user_id }}</span
+                  >รหัสผู้ใช้: {{admin_id}}</span
                 >
               </div>
             </div>
             <div class="d-grid gap-3">
-              <button
-                class="btn btn-light d-flex align-items-center"
-                type="button"
-                onclick="location.href='{% url 'edit_profile' %}';"
-              >
-                <i class="bi bi-tools me-2"></i> แก้ไขบัญชี
-              </button>
-
-              <button
-                class="btn btn-light d-flex align-items-center"
-                type="button"
-                onclick="location.href='{% url 'user_propose_history' %}';"
-              >
-                <i class="bi bi-clock-history me-2"></i> ประวัติการนำเสนอข้อความ
-              </button>
-              <button
-                class="btn btn-light d-flex align-items-center"
-                type="button"
-                onclick="location.href='{% url 'userannotatehist' %}';"
-              >
-                <i class="bi bi-clock-history me-2"></i> ประวัติการกำกับข้อความ
-              </button>
-              <button
-                class="btn btn-light d-flex align-items-center"
-                type="button"
-              >
-                <i class="bi bi-graph-up me-2"></i> สถิติการกำกับข้อความ
-              </button>
-              <button
-                class="btn btn-danger d-flex align-items-center"
-                type="button"
-              >
-                <i class="bi bi-box-arrow-right me-2"></i> ออกจากระบบ
-              </button>
-            </div>
+                <button
+                  class="btn btn-light d-flex align-items-center"
+                  type="button"
+                  onclick="location.href='{% url 'admin_edit_profile' %}';"
+                >
+                  <i class="bi bi-tools me-2"></i> แก้ไขบัญชี
+                </button>
+                <button
+                  class="btn btn-light d-flex align-items-center"
+                  type="button"
+                  onclick="location.href='{% url 'admin_edit_user' %}';"
+                >
+                  <i class="bi bi-kanban me-2"></i> จัดการบัญชีผู้ใช้
+                </button>
+                <button
+                  class="btn btn-light d-flex align-items-center"
+                  type="button"
+                  onclick="location.href='{% url 'admin_approved1' %}';"
+                >
+                  <i class="bi bi-check-lg me-2"></i> อนุมัติข้อความเชิงบูลลี่
+                </button>
+                <button
+                  class="btn btn-light d-flex align-items-center"
+                  type="button"
+                >
+                  <i class="bi bi-pen me-2"></i> เพิ่มลบชุดข้อมูลในการกำกับ
+                </button>
+                <button
+                  class="btn btn-light d-flex align-items-center"
+                  type="button"
+                >
+                  <i class="bi bi-check-lg me-2"></i> ตรวจสอบคะแนนความเชื่อมั่น
+                </button>
+                <button
+                  class="btn btn-light d-flex align-items-center"
+                  type="button"
+                >
+                  <i class="bi bi-gear-fill me-2"></i> จัดการชุดข้อมูลเพื่อฝึกสอนโมเดล
+                </button>
+                <button
+                  class="btn btn-light d-flex align-items-center"
+                  type="button"
+                >
+                  <i class="bi bi-gear-fill me-2"></i> ฝึกสอนโมเดล
+                </button>
+                <button
+                  class="btn btn-danger d-flex align-items-center"
+                  type="button"
+                >
+                  <i class="bi bi-box-arrow-right me-2"></i> ออกจากระบบ
+                </button>
+              </div>
           </div>
           <div class="col-lg-9">
             <div class="bg-black text-white p-4 h-100 rounded-2">
@@ -141,37 +165,36 @@
                     style="
                       width: 200px;
                       height: 200px;
+                      transition: transform 0.3s;
                     "
+                    onmouseover="this.style.transform='scale(1.05)';"
+                    onmouseout="this.style.transform='scale(1)';"
                   />
                 </div>
-                <div class="text-center text-lg-start col-lg-9 pe-4">
-                  <span class="fw-medium text-white fs-5" style="color: black"
-                    >รหัสผู้ใช้: {{ user_id }}</span
-                  ><br />
-                  <span class="fw-medium text-white fs-5" style="color: black"
-                    >ชื่อ: {{ user_fname }} {{ user_lname }}</span
-                  ><br />
-                  <span class="fw-medium text-white fs-5" style="color: black"
-                    >อีเมล : {{ email }} </span
-                  ><br />
-                  <span class="fw-medium text-white fs-5" style="color: black"
-                    >เบอร์โทรศัพท์ : {{ tel }}</span
-                  >
-                </div>
-              </div>
-              <div class="row mt-4 justify-content-center">
-                <div class="col-lg-6">
-                  <div class="bg-white p-2 rounded text-center">
-                    <h5 class="text-dark fw-bolder fs-2">{{ proposed_text_count }}</h5>
-                    <p class="text-dark fw-medium">ข้อความที่นำเสนอ</p>
+                <form class="text-center text-lg-start col-lg-9 pe-4" method="POST">
+                  {% csrf_token %}
+                  <div class="mb-3">
+                      <label for="user_fname" class="form-label text-white fs-5" style="color: black">ชื่อจริง</label>
+                      <input type="text" class="form-control" id="user_fname" name="user_fname" value="{{ user_to_edit.user_fname }}" />
                   </div>
-                </div>
-                <div class="col-lg-6">
-                  <div class="bg-white p-2 rounded text-center">
-                    <h5 class="text-dark fw-bolder fs-2">{{ supervised_text_count }}</h5>
-                    <p class="text-dark fw-medium">ข้อความที่ทำการกำกับ</p>
+                  <div class="mb-3">
+                      <label for="user_lname" class="form-label text-white fs-5" style="color: black">นามสกุล</label>
+                      <input type="text" class="form-control" name="user_lname" id="user_lname" value="{{ user_to_edit.user_lname }}" />
                   </div>
-                </div>
+                  <div class="mb-3">
+                      <label for="email" class="form-label text-white fs-5" style="color: black">อีเมล</label>
+                      <input type="email" class="form-control" id="email" name="email" value="{{ user_to_edit.email }}" />
+                  </div>
+                  <div class="mb-3">
+                      <label for="phone" class="form-label text-white fs-5" style="color: black">เบอร์</label>
+                      <input type="text" class="form-control" id="phone" name="tel" value="{{ user_to_edit.tel }}" />
+                  </div>
+                  <div class="col-lg-12 mt-4"> 
+                      <div class="d-flex justify-content-center">
+                          <button type="submit" class="btn btn-primary mt-4">บันทึก</button>
+                      </div>
+                  </div>
+                </form>
               </div>
             </div>
           </div>

@@ -76,6 +76,13 @@ class Admins(models.Model):
     @property
     def is_authenticated(self):
         return True  # Indicate that the admin is authenticated
+    @property
+    def is_active(self):
+        return True  # or add logic if you have specific active conditions
+    
+    @property
+    def is_staff(self):
+        return True  # Consider all admins as staff; modify as needed for your logic
 
     def set_password(self, raw_password):
         self.admin_pwd = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -98,7 +105,7 @@ class ProposedText(models.Model):
     word_status = models.CharField(db_column="word_status", max_length=30, null=True, blank=True, default="รออนุมัติ")
     upload_id = models.ForeignKey('ProposedFile', on_delete=models.CASCADE, db_column='uploaded_id')  # ForeignKey to ProposedFile
     word_class_type = models.CharField(max_length=100, db_column='word_class_type', null=True, blank=True)  # New field for word class type
-
+    admin = models.ForeignKey(Admins, on_delete=models.CASCADE, db_column='admin_id', null=True, blank=True)
     class Meta:
         db_table = 'proposed_text'
         managed = True
@@ -124,3 +131,41 @@ class ProposedFile(models.Model):
     def __str__(self):
         return self.file_name
 
+class Task(models.Model):
+    task_id = models.AutoField(primary_key=True)
+    annotated_id = models.IntegerField(null=True, blank=True)
+    admin = models.ForeignKey(
+        'Admins',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column='admin_id'
+    )  # ForeignKey relationship to Admins
+    task_name = models.CharField(max_length=50,db_column='task_name')
+    created_date = models.DateField(db_column='created_date')
+    due_date = models.DateField(db_column='due_date')
+    kappa_score = models.FloatField(db_column='kappa_score')
+    task_status = models.SmallIntegerField(db_column='task_status')
+
+    class Meta:
+        db_table = 'task'
+
+    def __str__(self):
+        return self.task_name
+    
+class AnnotatedText(models.Model):
+    annotated_id = models.CharField(max_length=25, unique=True, primary_key=True,db_column='annotated_id')  # Primary key (auto-incremented)
+    annotated_task_id = models.IntegerField(db_column='annotated_task_id')  # Task ID related to the annotation
+    annotated_class = models.SmallIntegerField(db_column='annotated_class')  # Class of the annotation
+    annotated_type = models.CharField(max_length=5,db_column='annotated_type')  # Type of the annotation
+    annotated_text = models.TextField(db_column='annotated_text')  # The annotated text
+    annotated_date = models.DateTimeField(auto_now_add=True,db_column='annotated_date')  # Date of annotation creation
+    text_id = models.ForeignKey(ProposedText, on_delete=models.CASCADE,db_column='text_id')  # Foreign key to ProposedText
+
+    class Meta:
+        db_table = 'annotated_text'  # Database table name for AnnotatedText
+        verbose_name = 'Annotated Text'  # Human-readable name for the model
+        verbose_name_plural = 'Annotated Texts'  # Human-readable plural name
+
+    def __str__(self):
+        return f"AnnotatedText(id={self.annotated_id}, text_id={self.text_id})"

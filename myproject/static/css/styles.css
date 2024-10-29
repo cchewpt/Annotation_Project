@@ -13812,6 +13812,17 @@ body {
   margin: 0;
 }
 
+.scroll-box {
+  overflow-y: auto; /* Enable scrolling if the content exceeds the height */
+  min-height: 600px; /* Adjust this height as necessary */
+}
+
+.content-table {
+  width: 100%; /* Ensures the table takes up full width */
+  height: 100%; /* Ensures the table takes up full height */
+  table-layout: fixed; /* Ensures equal column width */
+}
+
 /* Aligning Text and Button in the Same Row */
 .annotation-section .annotation-row {
   display: flex;

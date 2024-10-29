@@ -1,11 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate,login
+from django.contrib.auth import authenticate,login as auth_login
 from django.db import connection
-from django.contrib.auth import login as auth_login
 from django.contrib import messages
 from io import TextIOWrapper
-from .models import user_map, Users, ProposedText, ProposedFile,Admins
+from .models import user_map, Users, ProposedText, ProposedFile,Admins,Task,AnnotatedText
 import bcrypt  # Import bcrypt for password hashing
+import logging
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -23,6 +23,16 @@ from django.contrib.auth import get_user
 from django.db import models
 import random
 from django.contrib.auth.backends import BaseBackend
+from django.utils.translation import gettext as _
+from django.contrib.auth.forms import PasswordResetForm
+from django.core.mail import send_mail
+from django.urls import reverse
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+
 
 
 
@@ -62,6 +72,7 @@ def edit_profile(request):
             # For GET request, display the current data with default empty values if fields are None
             return render(request, 'accounts/edit_profile.html', {
                 'username': request.user.username,
+                'user_id': request.user.user_id,
                 'user_fname': request.user.user_fname or '',  # Use empty string if first_name is None
                 'user_lname': request.user.user_lname or '',   # Use empty string if last_name is None
                 'email': request.user.email or '',
@@ -93,10 +104,6 @@ def user_profile(request):
     else:
         return redirect('login')
 
-
-from django.contrib.auth import authenticate, login as auth_login
-from .models import Users, Admins
-
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -125,10 +132,251 @@ def login_view(request):
         return render(request, 'login.html', {'error_message': "Invalid username or password."})
 
     return render(request, 'login.html')  # Return the login page if the request is GET
-
-
     
+def admin_profile(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user  # Now guaranteed to be an instance of Admins
 
+        return render(request, 'accounts/admin_profile.html', {
+            'username': admin.admin_username,  # Use admin-specific fields
+            'user_id': admin.admin_id,
+            'email': admin.admin_email,
+            'tel': admin.admin_tel,
+            'user_lname': admin.admin_lname,
+            'user_fname': admin.admin_name
+        })
+    # Redirect to login if not authenticated or not an Admins instance
+    return redirect('login')
+
+def admin_edit_profile(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user  # Now guaranteed to be an instance of Admins
+
+        if request.method == 'POST':
+            # Fetch data from the form
+            admin_fname = request.POST.get('user_fname', '').strip()
+            admin_lname = request.POST.get('user_lname', '').strip()
+            admin_email = request.POST.get('email', '').strip()
+            admin_tel = request.POST.get('tel', '').strip()
+
+            # Update the admin's data
+            try:
+                admin.admin_name = admin_fname
+                admin.admin_lname = admin_lname
+                admin.admin_email = admin_email
+                admin.admin_tel = admin_tel
+
+                # Save changes to the database
+                admin.save()
+
+                # Send a success message
+                messages.success(request, "Profile updated successfully!")
+                return redirect('admin_profile')  # Redirect to a profile page after saving
+            except Exception as e:
+                # If something goes wrong, send an error message
+                messages.error(request, f"Error updating profile: {str(e)}")
+                return redirect('admin_edit_profile')
+
+        # For GET request, display the current data
+        return render(request, 'accounts/admin_edit_profile.html', {
+            'username': admin.admin_username,
+            'user_id': admin.admin_id,
+            'email': admin.admin_email,
+            'tel': admin.admin_tel,
+            'user_lname': admin.admin_lname,
+            'user_fname': admin.admin_name
+        })
+
+    # Redirect to login if not authenticated or not an Admins instance
+    return redirect('login')
+
+def admin_approved1(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user
+
+        # Get unique users who have entries in ProposedText
+        user_ids_with_proposed_texts = ProposedText.objects.values_list('user_id', flat=True).distinct()
+        users_with_proposed_texts = Users.objects.filter(user_id__in=user_ids_with_proposed_texts)
+        
+
+        return render(request, 'accounts/admin_approved1.html', {
+            'username': admin.admin_username,
+            'admin_id': admin.admin_id,
+            'email': admin.admin_email,
+            'tel': admin.admin_tel,
+            'user_lname': admin.admin_lname,
+            'user_fname': admin.admin_name,
+            'users_with_proposed_texts': users_with_proposed_texts
+        })
+
+    return redirect('login')
+
+def admin_approved2(request, user_id=None):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user  # The logged-in admin
+        
+        if user_id:
+            user = get_object_or_404(Users, user_id=user_id)
+            proposed_texts = ProposedText.objects.filter(user=user, word_status="รออนุมัติ")
+        else:
+            user = None
+            proposed_texts = ProposedText.objects.filter(word_status="รออนุมัติ")
+
+        proposed_text_count = proposed_texts.count()
+        print(proposed_texts)  # Debugging line to check what is being passed
+
+        return render(request, 'accounts/admin_approved2.html', {
+            'admin_username': admin.admin_username,
+            'admin_id': admin.admin_id,
+            'user': user,
+            'proposed_texts': proposed_texts,
+            'proposed_text_count': proposed_text_count,
+        })
+
+    return redirect('login')
+
+def update_text_status(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        text_id = request.POST.get('text_id')
+        status = request.POST.get('status')
+
+        proposed_text = get_object_or_404(ProposedText, id=text_id)
+
+        # Update the word status
+        proposed_text.word_status = status
+        proposed_text.save()
+
+        # If the text is approved and word_class_type is null, add it to annotated_text
+        if status == "อนุมัติ" and proposed_text.word_class_type is None:
+            annotated_text = AnnotatedText(
+                annotated_task_id=proposed_text.id,  # Use appropriate task ID
+                annotated_class=None,  # Set the class as needed; might require additional logic
+                annotated_type="your_type",  # Replace with appropriate value (if applicable)
+                annotated_text=proposed_text.word_text,  # Assuming this field is present
+                text_id=proposed_text  # Foreign key relation
+            )
+            annotated_text.save()
+
+        return redirect('admin_approved2', user_id=proposed_text.user.user_id)  # Redirect back to the admin approved page
+
+    return redirect('login')
+
+def update_text_status(request):
+    if request.method == 'POST' and request.user.is_authenticated:
+        text_id = request.POST.get('text_id')
+        status = request.POST.get('status')
+
+        # Update the status of the proposed text
+        proposed_text = get_object_or_404(ProposedText, text_id=text_id)
+        proposed_text.word_status = status
+        
+        # Set the admin who approved or rejected the proposed text
+        proposed_text.admin = request.user  # Assuming request.user is an instance of Admins
+        proposed_text.save()
+
+        # Redirect back to the 'admin_approved2' view with the user_id
+        user_id = proposed_text.user.user_id  # Assuming you want to redirect to the user who proposed the text
+        return redirect('admin_approved2_with_user_id', user_id=user_id)
+
+    # Redirect to a different page if not authenticated
+    return redirect('login')
+
+@login_required
+def admin_edit_user(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user
+
+        # Get the search query from the request
+        search_query = request.GET.get('search', '').strip()  # Use .strip() to remove extra whitespace
+
+        # Filter users based on the search query if provided
+        if search_query:
+            users = Users.objects.filter(username__icontains=search_query)
+        else:
+            users = Users.objects.all()
+
+        return render(request, 'accounts/admin_edit_user.html', {
+            'admin_username': admin.admin_username,
+            'admin_id': admin.admin_id,
+            'users': users,
+            'search_query': search_query,  # Pass the current search query back to the template
+        })
+
+    return redirect('login')
+
+def admin_edit_user2(request, user_id):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        # Fetch the user to edit using user_id
+        user_to_edit = get_object_or_404(Users, user_id=user_id)
+
+        if request.method == 'POST':
+            # Fetch data from the form
+            user_fname = request.POST.get('user_fname', '').strip()
+            user_lname = request.POST.get('user_lname', '').strip()
+            email = request.POST.get('email', '').strip()
+            tel = request.POST.get('tel', '').strip()
+
+            # Update the user's data
+            try:
+                user_to_edit.user_fname = user_fname
+                user_to_edit.user_lname = user_lname
+                user_to_edit.email = email
+                user_to_edit.tel = tel
+
+                # Save changes to the database
+                user_to_edit.save()
+
+                # Send a success message
+                messages.success(request, "User profile updated successfully!")
+                return redirect('admin_edit_user')  # Redirect back to edit page or to user list
+
+            except Exception as e:
+                # If something goes wrong, send an error message
+                messages.error(request, f"Error updating profile: {str(e)}")
+                return redirect('admin_edit_user2', user_id=user_to_edit.user_id)
+
+        # For GET request, display the current data
+        return render(request, 'accounts/admin_edit_user2.html', {
+            'admin_username': request.user.admin_username,
+            'admin_id': request.user.admin_id,
+            'user_to_edit': user_to_edit,  # Pass the user data to the template
+        })
+
+    return redirect('login')  # Redirect to login page if not authenticated
+
+def admin_assign_data(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user  # Now guaranteed to be an instance of Admins
+
+        return render(request, 'accounts/admin_assign_data.html', {
+            'username': admin.admin_username,  # Use admin-specific fields
+            'user_id': admin.admin_id,
+            'email': admin.admin_email,
+            'tel': admin.admin_tel,
+            'user_lname': admin.admin_lname,
+            'user_fname': admin.admin_name
+        })
+    # Redirect to login if not authenticated or not an Admins instance
+    return redirect('login')
+
+def admin_mng_datasets1(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user  # Now guaranteed to be an instance of Admins
+        
+        # Retrieve tasks associated with the admin or all tasks as needed
+        tasks = Task.objects.all()  # Retrieve all tasks or filter as necessary
+
+        return render(request, 'accounts/admin_mng_datasets1.html', {
+            'username': admin.admin_username,
+            'user_id': admin.admin_id,
+            'email': admin.admin_email,
+            'tel': admin.admin_tel,
+            'user_lname': admin.admin_lname,
+            'user_fname': admin.admin_name,
+            'tasks': tasks,  # Pass tasks to the template
+        })
+    # Redirect to login if not authenticated or not an Admins instance
+    return redirect('login')
 
 
 def mainlogin(request):
@@ -142,25 +390,129 @@ def mainlogin(request):
             print(f"Authenticated user: {request.user.username}")  # Debugging line
             return render(request, 'accounts/mainlogin.html', {
                 'username': request.user.username,
+                'user_role': 'user'
+                
             })
         elif isinstance(request.user, Admins):
             print(f"Authenticated admin: {request.user.admin_username}")  # Debugging line
             return render(request, 'accounts/mainlogin.html', {
                 'username': request.user.admin_username,
+                'user_role': 'admin'
             })
+
+    print("User is not authenticated. Redirecting to login.")
+    return redirect('login')
     
     print("User is not authenticated. Redirecting to login.")  # Debugging line
     return redirect('login')  # Redirect to login page if not authenticated
 
 def annotatepage(request):
-    return render(request, 'annotatepage.html')
+    if request.user.is_authenticated:
+        user = request.user
+
+        # Count the texts where the current user has proposed
+        proposed_text_count = ProposedText.objects.filter(user=user).count()
+
+        # Count texts that the user supervised (assuming some field tracks this, like word_status)
+        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
+
+        return render(request, 'accounts/annotatepage.html', {
+            'username': user.username,
+            'user_id': user.user_id,
+            'email': user.email,
+            'tel': user.tel,
+            'user_lname': user.user_lname,
+            'user_fname': user.user_fname,
+            'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
+            'supervised_text_count': supervised_text_count  # Pass the count of supervised texts
+        })
+    else:
+        return redirect('login')
+
+def userannotatehist(request):
+    if request.user.is_authenticated:
+        user = request.user
+
+        # Count the texts where the current user has proposed
+        proposed_text_count = ProposedText.objects.filter(user=user).count()
+
+        # Count texts that the user supervised (assuming some field tracks this, like word_status)
+        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
+
+        return render(request, 'accounts/userannotatehist.html', {
+            'username': user.username,
+            'user_id': user.user_id,
+            'email': user.email,
+            'tel': user.tel,
+            'user_lname': user.user_lname,
+            'user_fname': user.user_fname,
+            'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
+            'supervised_text_count': supervised_text_count  # Pass the count of supervised texts
+        })
+    else:
+        return redirect('login')
 
 def annotateselect(request):
-    return render(request, 'annotateselect.html')
+    if request.user.is_authenticated:
+        user = request.user
+
+        # Count the texts where the current user has proposed
+        proposed_text_count = ProposedText.objects.filter(user=user).count()
+
+        # Count texts that the user supervised (assuming some field tracks this, like word_status)
+        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
+
+        return render(request, 'accounts/annotateselect.html', {
+            'username': user.username,
+            'user_id': user.user_id,
+            'email': user.email,
+            'tel': user.tel,
+            'user_lname': user.user_lname,
+            'user_fname': user.user_fname,
+            'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
+            'supervised_text_count': supervised_text_count  # Pass the count of supervised texts
+        })
+    else:
+        return redirect('login')
+
+logger = logging.getLogger(__name__)
 def forgotpass(request):
+    if request.method == "POST":
+        email = request.POST.get('email')
+        logger.debug(f'Received password reset request for email: {email}')  # Debug line
+        
+        associated_user = User.objects.filter(email=email).first()
+        
+        if associated_user:
+            logger.debug(f'User found: {associated_user.username}')  # Debug line
+            subject = "Password Reset Request"
+            email_template = 'accounts/password_reset_email.html'
+            context = {
+                "email": associated_user.email,
+                "domain": request.META['HTTP_HOST'],  # Domain from the current request
+                "site_name": 'Your Website',
+                "uid": urlsafe_base64_encode(force_bytes(associated_user.pk)),
+                "user": associated_user,
+                "token": default_token_generator.make_token(associated_user),
+                "protocol": 'https' if request.is_secure() else 'http',
+            }
+            try:
+                email_body = render_to_string(email_template, context)
+                logger.debug(f'Email body rendered: {email_body}')  # Debug line
+                send_mail(subject, email_body, settings.EMAIL_HOST_USER, [associated_user.email])
+                messages.success(request, 'A password reset link has been sent to your email.')
+                logger.debug('Email sent successfully')  # Debug line
+            except Exception as e:
+                logger.error(f'Error sending email: {str(e)}')  # Log the error
+                messages.error(request, f'Error sending email: {str(e)}')  # Feedback to user
+        else:
+            messages.error(request, 'No user is associated with this email address.')  # Feedback if user not found
+            logger.debug('No user found for the provided email address')  # Debug line
+
     return render(request, 'forgotpass.html')
 
 def texttopost(request):
+
     if request.user.is_authenticated:
         if request.method == 'POST':
             proposed_text = request.POST.get('user_proposed_text', '').strip()  # Get input and strip whitespace
@@ -203,6 +555,7 @@ def texttopost(request):
         })
     else:
         return redirect('login')
+
 @login_required
 def texttopostFile(request):
     if request.user.is_authenticated:
@@ -365,16 +718,51 @@ def texttopostFile(request):
         'username': request.user.username,
     })
 
-
-
-
-
-    
-    
 def txtverify(request):
-    return render(request, 'txtverify.html')
+    if request.user.is_authenticated:
+        user = request.user
+
+        # Count the texts where the current user has proposed
+        proposed_text_count = ProposedText.objects.filter(user=user).count()
+
+        # Count texts that the user supervised (assuming some field tracks this, like word_status)
+        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
+
+        return render(request, 'accounts/txtverify.html', {
+            'username': user.username,
+            'user_id': user.user_id,
+            'email': user.email,
+            'tel': user.tel,
+            'user_lname': user.user_lname,
+            'user_fname': user.user_fname,
+            'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
+            'supervised_text_count': supervised_text_count  # Pass the count of supervised texts
+        })
+    else:
+        return redirect('login')
+
 def txtverifyFile(request):
-    return render(request, 'txtverifyFile.html')
+    if request.user.is_authenticated:
+        user = request.user
+
+        # Count the texts where the current user has proposed
+        proposed_text_count = ProposedText.objects.filter(user=user).count()
+
+        # Count texts that the user supervised (assuming some field tracks this, like word_status)
+        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
+
+        return render(request, 'accounts/txtverifyFile.html', {
+            'username': user.username,
+            'user_id': user.user_id,
+            'email': user.email,
+            'tel': user.tel,
+            'user_lname': user.user_lname,
+            'user_fname': user.user_fname,
+            'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
+            'supervised_text_count': supervised_text_count  # Pass the count of supervised texts
+        })
+    else:
+        return redirect('login')
 
 def registration(request):
     if request.method == 'POST':
@@ -443,6 +831,24 @@ def registration(request):
         'success_message': None
     })
 
+def user_propose_history(request):
+    if request.user.is_authenticated and isinstance(request.user, Users):
+        user = request.user
+
+        # Fetch proposed texts and related user information
+        proposed_texts = ProposedText.objects.filter(user=user).select_related('user').order_by('text_id')
+
+        return render(request, 'accounts/user_propose_history.html', {
+            'username': user.username,
+            'user_id': user.user_id,
+            'email': user.email,
+            'tel': user.tel,
+            'user_lname': user.user_lname,
+            'user_fname': user.user_fname,
+            'proposed_texts': proposed_texts,
+        })
+
+    return redirect('login')
 
 def generate_user_id():
     while True:

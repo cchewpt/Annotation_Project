@@ -42,16 +42,19 @@
                         <li class="nav-item"><a class="nav-link" href="../dist/txtverify.html">วิเคราะห์ข้อความ</a></li>
                         <li class="nav-item"><a class="nav-link" href="../dist/texttopost.html">เสนอข้อความ</a></li>
                     </ul>
-                    <div class="user-profile-box ms-lg-3 p-2">
-                        <div class="d-flex align-items-center">
-                            <img src="assets/placeholder-profile.png" alt="User Picture"
-                                style="width: 30px; height: 30px;" class="rounded-circle me-2">
-                            <div class="d-flex flex-column">
-                                <span class="fw-bold" style="color: black;">ชื่อผู้ใช้: saya9833</span>
-                                <span class="text-muted small">รหัสผู้ใช้: A01</span>
+                    <div class="user-profile-box m-lg-0 py-1">
+                        <div class="d-inline-flex align-items-center">
+                            <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
+                                style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
+                                onclick="location.href='{% if user_role == 'admin' %}{% url 'admin_profile' %}{% else %}{% url 'user_profile' %}{% endif %}';" />
+                    
+                            <div class="d-md-flex flex-column">
+                                <span class="fw-medium" style="color: black; cursor: pointer">
+                                    ชื่อผู้ใช้: {{ username }}
+                                </span>
+                                <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
                             </div>
                         </div>
-                        <a href="#" class="d-block text-center fw-bold text-danger mt-2">ออกจากระบบ</a>
                     </div>
                 </div>
             </div>

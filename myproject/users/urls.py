@@ -16,5 +16,16 @@ urlpatterns = [
     path('registration/', views.registration, name='registration'),
     path('login/accounts/annotateselect/', views.annotateselect, name='annotateselect'),
     path('login/accounts/edit_profile/', views.edit_profile, name='edit_profile'),
-    path('login/accounts/user_profile/', views.user_profile, name='user_profile')
+    path('login/accounts/user_profile/', views.user_profile, name='user_profile'),
+    path('login/accounts/admin_profile/', views.admin_profile, name='admin_profile'),
+    path('login/accounts/user_propose_history/', views.user_propose_history, name='user_propose_history'),
+    path('login/accounts/admin_edit_user/', views.admin_edit_user, name='admin_edit_user'),
+    path('login/accounts/admin_edit_user2/<int:user_id>/', views.admin_edit_user2, name='admin_edit_user2'),
+    path('login/accounts/admin_edit_profile/', views.admin_edit_profile, name='admin_edit_profile'),
+    path('update_text_status/', views.update_text_status, name='update_text_status'),
+    path('login/accounts/admin_approved1/', views.admin_approved1, name='admin_approved1'),
+    path('login/accounts/admin_approved2/<int:user_id>/', views.admin_approved2, name='admin_approved2_with_user_id'),
+    path('login/accounts/admin_assign_data/', views.admin_assign_data, name='admin_assign_data'),
+    path('login/accounts/admin_mng_datasets1/', views.admin_mng_datasets1, name='admin_mng_datasets1'),
+    path('login/accounts/userannotatehist/', views.userannotatehist, name='userannotatehist')
 ]

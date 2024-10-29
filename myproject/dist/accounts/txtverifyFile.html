@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -18,7 +19,7 @@
   <!-- Bootstrap icons-->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet" />
   <!-- Core theme CSS (includes Bootstrap)-->
-  <link href="../static/css/styles.css" rel="stylesheet" />
+  <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
 </head>
 
 <body class="d-flex flex-column h-100 bg-light">
@@ -37,27 +38,26 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
-            <li class="nav-item">
-              <a class="nav-link" href="../dist/mainlogin.html">หน้าแรก</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="../dist/annotatepage.html">กำกับข้อความ</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link nav-box" href="../dist/txtverify.html">วิเคราะห์ข้อความ</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="../dist/texttopost.html">เสนอข้อความ</a>
-            </li>
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
+              <li class="nav-item"><a class="nav-link" href="{% url 'mainlogin' %}">หน้าแรก</a></li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'annotatepage' %}">กำกับข้อความ</a></li>
+              <li class="nav-item"><a class="nav-link nav-box" href="{% url 'txtverify' %}">วิเคราะห์ข้อความ</a></li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'texttopost' %}">เสนอข้อความ</a></li>
+            </ul>
           </ul>
           <div class="user-profile-box m-lg-0 py-1">
-            <div class="d-inline-flex align-items-center">
-              <img src="../static/assets/profile-placeholder.png" alt="User Picture"
-                style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
-                onclick="location.href='../dist/user-profile.html';" />
-              <div class="d-md-flex flex-column">
-                <span class="fw-medium" style="color: black; cursor: pointer">ชื่อผู้ใช้: saya9833 (A01)</span>
-                <a href="../dist/index.html" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
+            <div class="user-profile-box m-lg-0 py-1">
+              <div class="d-inline-flex align-items-center">
+                  <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
+                      style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
+                      onclick="location.href='{% if user_role == 'admin' %}{% url 'admin_profile' %}{% else %}{% url 'user_profile' %}{% endif %}';" />
+          
+                  <div class="d-md-flex flex-column">
+                      <span class="fw-medium" style="color: black; cursor: pointer">
+                          ชื่อผู้ใช้: {{ username }}
+                      </span>
+                      <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
+                  </div>
               </div>
             </div>
           </div>
@@ -76,7 +76,7 @@
 
             <!-- Toggle Buttons -->
             <div class="d-flex justify-content-left mb-3">
-              <a href="../dist/txtverify.html" class="btn btn-toggle text-white me-2">ข้อความ</a>
+              <a href="{% url 'txtverify' %}" class="btn btn-toggle text-white me-2">ข้อความ</a>
               <button id="file-input-btn" class="btn btn-toggle bg-white rounded-pill">
                 ไฟล์ข้อมูล
               </button>
@@ -84,16 +84,21 @@
 
             <!-- File Input Section -->
             <div id="file-input-section" class="form-container">
-              <form id="file-form">
+              <form id="file-form2" enctype="multipart/form-data" method="post" action="{% url 'txtverifyFile' %}">
+                {% csrf_token %}
                 <div class="mb-3">
-                  <label for="file-upload" class="form-label text-white">โปรดอัปโหลดไฟล์ (รองรับเฉพาะ .csv หรือ
-                    .xml)</label>
-                  <input type="file" class="form-control" id="file-upload" accept=".csv, .xml" />
+                    <label for="file-upload" class="form-label text-white">โปรดอัปโหลดไฟล์ (รองรับเฉพาะ .csv หรือ .xml)</label>
+                    <input type="file" class="form-control" id="file-upload2" name="file" accept=".csv, .xml" required />
                 </div>
-                <button id="verify-file-btn" type="submit" class="btn btn-success">
-                  วิเคราะห์ข้อความ
-                </button>
+                {% if error_message %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error_message }}
+                    </div>
+                {% endif %}
+                <button id="submit-file-btn" type="submit" class="btn btn-success">ส่งไฟล์</button>
               </form>
+            
+              
 
               <!-- Example Files Section -->
               <div class="container mt-5">
@@ -101,11 +106,11 @@
 
                 <!-- Buttons to choose between CSV and XML examples -->
                 <div class="mb-3 d-flex justify-content-center">
-                  <button id="csv-button" class="btn me-2">
-                    ตัวอย่างไฟล์ CSV
+                  <button id="csv-button" class="btn me-2" style="color: white;">
+                      ตัวอย่างไฟล์ CSV
                   </button>
-                  <button id="xml-button" class="btn">
-                    ตัวอย่างไฟล์ XML
+                  <button id="xml-button" class="btn" style="color: white;">
+                      ตัวอย่างไฟล์ XML
                   </button>
                 </div>
 
@@ -115,16 +120,16 @@
                     <div class="col-md-8 text-center">
                       <div id="csv-example" class="picEx">
                         <h4 class="text-white">ตัวอย่างไฟล์ CSV</h4>
-                        <img src="../static/assets/CSVFileEX.png" alt="CSV Example Image" class="img-fluid mb-3" />
+                        <img src="{% static 'assets/CSVFileEX.png' %}" alt="CSV Example Image" class="img-fluid mb-3" />
                         <br />
-                        <a href="path/to/example.csv" download class="btn btn-success">ดาวน์โหลดตัวอย่างไฟล์ CSV</a>
+                        <a href="{% static 'example_proposed_file/ตัวอย่างไฟล์CSV.csv' %}" download class="btn btn-success">ดาวน์โหลดตัวอย่างไฟล์ CSV</a>
                       </div>
 
                       <div id="xml-example" class="picEx" style="display: none">
                         <h4 class="text-white">ตัวอย่างไฟล์ XML</h4>
-                        <img src="../static/assets/XMLFileEx.png" alt="XML Example Image" class="img-fluid mb-3" />
+                        <img src="{% static 'assets/XMLFileEX.png' %}" alt="XML Example Image" class="img-fluid mb-3" />
                         <br />
-                        <a href="path/to/example.xml" download class="btn btn-success">ดาวน์โหลดตัวอย่างไฟล์ XML</a>
+                        <a href="{% static 'example_proposed_file/ตัวอย่างไฟล์XML.xml' %}" download class="btn btn-success">ดาวน์โหลดตัวอย่างไฟล์ XML</a>
                       </div>
                     </div>
                   </div>
