@@ -26,15 +26,13 @@
     />
     <!-- Core theme CSS (includes Bootstrap)-->
     <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
-    <!-- External Stylesheet for User List Section -->
-    <link href="styles.css" rel="stylesheet" />
   </head>
 
   <body class="d-flex flex-column h-100 bg-dark">
     <!-- Navigation-->
     <nav class="navbar navbar-expand-lg navbar-light py-3 bg-greydarker">
       <div class="container px-5">
-        <a class="navbar-brand" href="../dist/index.html">
+        <a class="navbar-brand" href="{% url 'mainlogin' %}">
           <span class="fw-bolder border-rounded" style="color: black">
             ระบบการกำกับข้อความเชิงบูลลี่ภาษาไทย
           </span>
@@ -52,36 +50,21 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
-            <li class="nav-item">
-              <a class="nav-link" href="mainlogin.html">หน้าแรก</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="annotatepage.html">กำกับข้อความ</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="txtverify.html">วิเคราะห์ข้อความ</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="texttopost.html">เสนอข้อความ</a>
-            </li>
-          </ul>
+            <li class="nav-item"><a class="nav-link" href="{% url 'mainlogin' %}">หน้าแรก</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'annotatepage' %}">กำกับข้อความ</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'txtverify' %}">วิเคราะห์ข้อความ</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'texttopost' %}">เสนอข้อความ</a></li>
+        </ul>
           <div class="user-profile-box m-lg-0 py-1">
             <div class="d-inline-flex align-items-center">
-              <img
-                src="../static/assets/profile-placeholder.png"
-                alt="User Picture"
-                style="width: 40px; height: 40px; cursor: pointer"
-                class="rounded-circle me-2"
-                onclick="location.href='../dist/user-profile.html';"
-              />
-              <div class="d-md-flex flex-column">
-                <span class="fw-medium" style="color: black; cursor: pointer"
-                  >ชื่อผู้ใช้: sayan1989 (A01)</span
-                >
-                <a href="#" class="d-block fw-semibold text-danger"
-                  >ออกจากระบบ</a
-                >
-              </div>
+                <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
+                    style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
+                    onclick="location.href='{% url 'admin_profile' %}';" />
+          
+                <div class="d-md-flex flex-column">
+                    <span class="fw-medium" style="color: black; cursor: pointer">ชื่อผู้ใช้: {{ username }}</span>
+                    <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
+                </div>
             </div>
           </div>
         </div>
@@ -114,30 +97,38 @@
               <button
                 class="btn btn-light d-flex align-items-center"
                 type="button"
-                onclick="location.href='../dist/admin-edit-profile.html';"
+                onclick="location.href='{% url 'admin_edit_profile' %}';"
               >
                 <i class="bi bi-tools me-2"></i> แก้ไขบัญชี
               </button>
+
               <button
                 class="btn btn-light d-flex align-items-center"
                 type="button"
-                onclick="location.href='../dist/userposthistory1.html';"
+                onclick="location.href='{% url 'admin_edit_user' %}';"
               >
                 <i class="bi bi-kanban me-2"></i> จัดการบัญชีผู้ใช้
               </button>
+
+
               <button
                 class="btn btn-light d-flex align-items-center"
                 type="button"
-                onclick="location.href='../dist/userannotatehist.html';"
+                onclick="location.href='{% url 'admin_approved1' %}';"
               >
                 <i class="bi bi-check-lg me-2"></i> อนุมัติข้อความเชิงบูลลี่
               </button>
+
+
               <button
                 class="btn btn-light d-flex align-items-center"
                 type="button"
+                onclick="location.href='{% url 'admin_mng_datasets1' %}';"
               >
                 <i class="bi bi-pen me-2"></i> เพิ่มลบชุดข้อมูลในการกำกับ
               </button>
+
+
               <button
                 class="btn btn-light d-flex align-items-center"
                 type="button"
@@ -167,34 +158,75 @@
 
           <!-- Insert here -->
           <div class="col-lg-9">
-            <div class="container scrollable-datasets-list1">
-                {% for task in tasks %}
-                <div class="card user-card mb-3">
-                    <div class="card-body d-flex align-items-center">
-                        <div>
-                            <h5 class="card-title mb-0">{{ task.task_name }}</h5>
-                            <p class="card-text">ระยะเวลา {{ task.created_date }} ถึง {{ task.due_date }}</p>
-                        </div>
-                        <div class="ms-auto">
-                            <a href="admin-check-data.html"><button class="btn btn-secondary me-2">ตรวจสอบ</button></a>
-                            <button class="btn btn-danger">ลบชุดข้อมูล</button>
-                        </div>
+            <form method="post" action="{% url 'assign_user_tasks' %}">
+                {% csrf_token %}
+                <div class="col-lg-9">
+                    <div class="container scrollable-datasets-list1">
+                        <label for="task-select" class="form-label">เลือกงาน:</label>
+                        <select id="task-select" name="task_id" class="form-select mb-3">
+                            <option value="" disabled selected>กรุณาเลือกงาน</option> <!-- Placeholder option -->
+                            {% for task in tasks %}
+                                <option value="{{ task.task_id }}">{{ task.task_name }} (ระยะเวลา {{ task.created_date }} ถึง {{ task.due_date }})</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
-                {% endfor %}
-              </div>
-          </div>
+        
+                <div class="scrollable-user-list1">
+                    <div class="row">
+                        {% for user in users %}
+                        <div class="col-md-6">
+                            <div class="card user-card mb-3">
+                                <div class="card-body d-flex align-items-center">
+                                    <img
+                                        src="{% static 'assets/profile-placeholder.png' %}"
+                                        class="rounded-circle me-3"
+                                        alt="User profile image"
+                                        style="width: 60px; height: 60px;"
+                                    />
+                                    <div>
+                                        <h5 class="card-title mb-0">ชื่อผู้ใช้: {{ user.username }}</h5> <!-- Use the correct username field -->
+                                        <p class="card-text">รหัสผู้ใช้: {{ user.user_id }}</p> <!-- Use the correct user_id field -->
+                                    </div>
+                                    <input type="checkbox" name="user_ids" value="{{ user.user_id }}" class="ms-auto" />
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p>ไม่พบผู้ใช้งานที่ตรงกับการค้นหา</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </form>
             <div class="d-flex justify-content-between mt-4">
-                <button class="btn btn-success mx-auto">เพิ่มชุดข้อมูล</button>
-                <button class="btn btn-primary" style="background-color: #BD91E0">
-                  มอบหมาย
-                </button>
+              <button class="btn btn-success mx-auto" onclick="location.href='{% url 'admin_add_datasets' %}';">เพิ่มงาน</button>
+              <button type="button" class="btn btn-primary" style="background-color: #BD91E0" onclick="assignTasks();">มอบหมาย</button>
             </div>
+          </div>
           </div>
         </div>
       </div>
     </main>
+    <script>
+      function assignTasks() {
+          const selectedUserIds = [];
+          const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked'); // Get all checked user checkboxes
 
+          checkboxes.forEach(checkbox => {
+              selectedUserIds.push(checkbox.value); // Push the user ID to the array
+          });
+
+          const taskId = document.getElementById('task-select').value; // Get the selected task ID
+
+          // Redirect to admin_assign_data with user_ids and task_id as query parameters
+          if (selectedUserIds.length > 0 && taskId) {
+              const userIds = selectedUserIds.join(',');
+              window.location.href = '{% url "admin_assign_data" 0 %}'.replace('0', taskId) + '?user_ids=' + userIds;
+          } else {
+              alert('กรุณาเลือกผู้ใช้และงานก่อน'); // Alert if no user is selected
+          }
+      }
+  </script>
     <!-- Footer-->
     <footer class="bg-brightred py-4 mt-auto">
       <div class="container px-5">

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -18,7 +19,7 @@
     <!-- Bootstrap icons-->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet" />
     <!-- Core theme CSS (includes Bootstrap)-->
-    <link href="../static/css/styles.css" rel="stylesheet" />
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
 </head>
 
 <body class="d-flex flex-column h-100">
@@ -26,48 +27,56 @@
         <!-- Navigation-->
         <nav class="navbar navbar-expand-lg navbar-light py-3 bg-greydarker">
             <div class="container px-5">
-                <a class="navbar-brand" href="index.html">
-                    <span class="fw-bolder border-rounded" style="color: black;">
-                        ระบบการกำกับข้อความเชิงบูลลี่ภาษาไทย
-                    </span>
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
-                    aria-expanded="false" aria-label="Toggle navigation"><span
-                        class="navbar-toggler-icon"></span></button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
-                        <li class="nav-item"><a class="nav-link" href="../dist/mainlogin.html">หน้าแรก</a></li>
-                        <li class="nav-item"><a class="nav-link nav-box" href="../dist/annotatepage.html">กำกับข้อความ</a></li>
-                        <li class="nav-item"><a class="nav-link" href="../dist/txtverify.html">วิเคราะห์ข้อความ</a></li>
-                        <li class="nav-item"><a class="nav-link" href="../dist/texttopost.html">เสนอข้อความ</a></li>
-                    </ul>
-                    <div class="user-profile-box m-lg-0 py-1">
-                        <div class="d-inline-flex align-items-center">
-                            <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
-                                style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
-                                onclick="location.href='{% if user_role == 'admin' %}{% url 'admin_profile' %}{% else %}{% url 'user_profile' %}{% endif %}';" />
-                    
-                            <div class="d-md-flex flex-column">
-                                <span class="fw-medium" style="color: black; cursor: pointer">
-                                    ชื่อผู้ใช้: {{ username }}
-                                </span>
-                                <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
-                            </div>
-                        </div>
-                    </div>
+              <a class="navbar-brand" href="index.html">
+                <span class="fw-bolder border-rounded" style="color: black">
+                  ระบบการกำกับข้อความเชิงบูลลี่ภาษาไทย
+                </span>
+              </a>
+              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+              </button>
+              <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
+                  <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'mainlogin' %}">หน้าแรก</a></li>
+                    <li class="nav-item"><a class="nav-link nav-box" href="{% url 'annotatepage' %}">กำกับข้อความ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'txtverify' %}">วิเคราะห์ข้อความ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'texttopost' %}">เสนอข้อความ</a></li>
+                </ul>
+                </ul>
+                <div class="user-profile-box m-lg-0 py-1">
+                  <div class="d-inline-flex align-items-center">
+                      <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
+                          style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
+                          onclick="location.href='{% if user_role == 'admin' %}{% url 'admin_profile' %}{% else %}{% url 'user_profile' %}{% endif %}';" />
+              
+                      <div class="d-md-flex flex-column">
+                          <span class="fw-medium" style="color: black; cursor: pointer">
+                              ชื่อผู้ใช้: {{ username }}
+                          </span>
+                          <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
+                      </div>
+                  </div>
                 </div>
+              </div>
             </div>
-        </nav>
+          </nav>
         <!--Insert Between Here-->
         <div class="annotation-page container mt-5">
             <!-- Title Section -->
-            <h1 class="annotation-title">กำกับข้อความชุดข้อความชุดที่ 1</h1>
+            <h1 class="annotation-title">กำกับข้อความชุด: {{ task_name }}</h1>
 
             <!-- Left Section with Details and Word -->
             <div class="annotation-details">
-                <p>ข้อความที่ 4/15</p>
-                <div class="annotation-word">"ข้อความที่ 7"</div>
+                <div class="annotation-info">
+                    {% if current_text %}
+                        <p>ข้อความที่ {{ current_index }} จาก {{ annotated_texts.count }} </p> <!-- Show index and total count -->
+                        <div class="annotation-word">"{{ current_text.annotated_text }}"</div> <!-- Display the current annotated text -->
+                    {% else %}
+                        <p>ไม่มีข้อความที่พร้อมให้กำกับ</p> <!-- Message if no words available -->
+                    {% endif %}
+                </div>
             </div>
 
             <!-- Bully and Not Bully Buttons -->
@@ -80,20 +89,22 @@
             <div class="bully-type-section">
                 <p class="bully-type-title">เป็นข้อความประเภทใด</p>
                 <div class="bully-type-options d-flex flex-wrap justify-content-center">
-                    <button class="bully-type disabled">บูลลี่ทางเพศสภาพ</button>
-                    <button class="bully-type disabled">บูลลี่ทางฐานะ</button>
-                    <button class="bully-type disabled">บูลลี่ทางรูปร่าง</button>
-                    <button class="bully-type disabled">บูลลี่ทางสภาพครอบครัว</button>
-                    <button class="bully-type disabled">บูลลี่ทางอารมณ์</button>
-                    <button class="bully-type disabled">บูลลี่ด้านศาสนา</button>
-                    <button class="bully-type disabled">บูลลี่ทางด้านสังคม</button>
+                    <button class="bully-type" id="bullySexual">บูลลี่ทางเพศสภาพ</button>
+                    <button class="bully-type" id="bullyStatus">บูลลี่ทางฐานะ</button>
+                    <button class="bully-type" id="bullyShape">บูลลี่ทางรูปร่าง</button>
+                    <button class="bully-type" id="bullyFamily">บูลลี่ทางสภาพครอบครัว</button>
+                    <button class="bully-type" id="bullyEmotion">บูลลี่ทางอารมณ์</button>
+                    <button class="bully-type" id="bullyReligion">บูลลี่ด้านศาสนา</button>
+                    <button class="bully-type" id="bullySocial">บูลลี่ทางด้านสังคม</button>
+                    <button class="bully-btn" id="notBullyBtn">ไม่บูลลี่</button>
                 </div>
             </div>
 
             <!-- Navigation Buttons -->
             <div class="nav-buttons d-flex justify-content-between">
                 <a href="../dist/selecteddatasets.html"><button class="nav-btn" id="backBtn">ย้อนกลับ</button></a>
-                <a href="../dist/selecteddatasets.html"><button class="nav-btn" id="confirmBtn">ยืนยันคำตอบ</button></a>
+                <button class="nav-btn" id="confirmBtn" data-annotated-id="{{ annotated_id }}">ยืนยันคำตอบ</button>
+
             </div>
         </div>
         <!--Insert Between Here-->
@@ -123,28 +134,61 @@
     <script src="js/scripts.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", function() {
+            let annotatedClass = null; // Variable to hold the annotated class
+            let annotatedType = '';
             const bullyBtn = document.getElementById("bullyBtn");
             const notBullyBtn = document.getElementById("notBullyBtn");
-            const bullyTypes = document.querySelectorAll(".bully-type");
-
-            bullyBtn.addEventListener("click", function () {
+            const bullyButtons = document.querySelectorAll('.bully-type');
+        
+            // Set annotatedClass to 1 when "บูลลี่" button is clicked
+            bullyBtn.addEventListener("click", function() {
+                annotatedClass = 1;
+                annotatedType = 'บูลลี่ทางเพศสภาพ';
                 bullyBtn.classList.add("active");
                 notBullyBtn.classList.remove("active");
-
-                // Enable bully type buttons
-                bullyTypes.forEach(btn => btn.classList.remove("disabled"));
+                console.log("Annotated Class set to:", annotatedClass); // Debug log
             });
-
-            notBullyBtn.addEventListener("click", function () {
+        
+            // Set annotatedClass to 0 when "ไม่บูลลี่" button is clicked
+            notBullyBtn.addEventListener("click", function() {
+                annotatedClass = 0;
+                annotatedType = 'ไม่บูลลี่';
                 notBullyBtn.classList.add("active");
                 bullyBtn.classList.remove("active");
-
-                // Disable bully type buttons
-                bullyTypes.forEach(btn => btn.classList.add("disabled"));
+                console.log("Annotated Class set to:", annotatedClass); // Debug log
+            });
+        
+            // Confirm selection and send to server
+            document.getElementById('confirmBtn').addEventListener('click', function(event) {
+                event.preventDefault();
+        
+                if (annotatedClass !== null) { // Ensure a selection was made
+                    fetch(`/update_annotation/${annotated_id}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}', // Django CSRF token
+                        },
+                        body: JSON.stringify({ annotated_class: annotatedClass, annotated_type: annotatedType })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log("Annotation updated successfully.");
+                            // Proceed to the next text or any additional actions
+                        } else {
+                            alert('Failed to update annotation.');
+                        }
+                    })
+                    .catch(error => console.error('Error updating annotation:', error));
+                } else {
+                    alert('กรุณาเลือกประเภทบูลลี่หรือไม่บูลลี่'); // Prompt if no selection
+                }
             });
         });
     </script>
+
 </body>
 
 </html>

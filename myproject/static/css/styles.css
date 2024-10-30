@@ -13831,6 +13831,320 @@ body {
   margin-bottom: 1rem;
 }
 
+/*Admin Edit User*/
+.scrollable-user-list {
+  max-height: 600px; 
+  overflow-y: auto;  
+  padding-right: 10px; 
+}
+
+.user-card {
+  background-color: #e4e3e7;
+  border: none;
+}
+
+.user-card .card-title {
+  color: black;
+}
+
+.user-card .card-text {
+  color: grey;
+}
+
+.btn-primary {
+  background-color: #9c6eef;
+  border-color: #9c6eef;
+}
+
+.btn-primary:hover {
+  background-color: #8a5cd6;
+  border-color: #8a5cd6;
+}
+
+.search-bar .form-control {
+  background-color: #2d2d2d;
+  color: white;
+  border: none;
+  padding: 15px;
+}
+
+.search-bar .form-control::placeholder {
+  color: #ccc;
+}
+
+.scrollable-user-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollable-user-list::-webkit-scrollbar-thumb {
+  background-color: var(--bs-brightred); 
+  border-radius: 10px;
+}
+
+.scrollable-user-list::-webkit-scrollbar-thumb:hover {
+  background-color: #8a5cd6;
+}
+/*Admin Edit User*/
+/*--------------------------------------------*/
+/*Admin Approved2*/
+.user-profile-page .user-info-card {
+background-color: #e4e3e7;
+}
+
+.user-profile-page .user-info-card .card-text {
+color: grey;
+}
+
+.user-profile-page .table-white {
+background-color: white;
+}
+
+.user-profile-page .table-white th,
+.user-profile-page .table-white td {
+color: black; 
+}
+
+.user-profile-page .btn-status {
+padding-left: 20px;
+padding-right: 20px;
+font-weight: 500;
+}
+
+.user-profile-page .btn-status.me-2 {
+margin-right: 10px;
+}
+
+.user-profile-page .btn-success {
+background-color: #28a745;
+border-color: #28a745;
+}
+
+.user-profile-page .btn-danger {
+background-color: #dc3545;
+border-color: #dc3545;
+}
+
+.user-profile-page .btn-status:hover {
+opacity: 0.9; 
+}
+
+.scrollable-table {
+max-height: 400px; 
+overflow-y: auto;  
+padding-right: 10px;
+}
+
+.scrollable-table::-webkit-scrollbar {
+width: 8px;  
+}
+
+.scrollable-table::-webkit-scrollbar-thumb {
+background-color: var(--bs-brightred);  
+border-radius: 10px;  
+}
+
+.scrollable-table::-webkit-scrollbar-thumb:hover {
+background-color: #8a5cd6;  
+}
+
+.table-white {
+background-color: white;
+color: black;
+}
+
+.btn-status {
+padding: 0.375rem 0.75rem;
+font-size: 0.875rem;
+line-height: 1.5;
+}
+.bully-type {
+  pointer-events: auto; /* Ensure this is set */
+}
+.table-hover tbody tr:hover {
+background-color: #f8f9fa;  
+}
+/*Admin Approved2*/
+/*Admin mng datasets*/
+.scrollable-datasets-list1 {
+max-height: 600px; /* Set the maximum height */
+overflow-y: auto; /* Enable vertical scrolling */
+overflow-x: hidden; /* Disable horizontal scrolling */
+padding: 20px;
+border-radius: 4px; /* Optional: round the corners */
+}
+
+.scrollable-datasets-list1::-webkit-scrollbar {
+width: 8px;
+}
+
+.scrollable-datasets-list1::-webkit-scrollbar-thumb {
+background-color: var(--bs-brightred); 
+border-radius: 10px;
+}
+
+.scrollable-datasets-list1::-webkit-scrollbar-thumb:hover {
+background-color: #8a5cd6;
+}
+/*Admin mng datasets*/
+.content-history-section {
+border: 2px solid #e74c3c;
+padding: 10px;
+border-radius: 10px;
+margin-top:1rem;
+}
+
+.history-title {
+text-align: center;
+font-size: 1.5em;
+margin-bottom: 15px;
+color: #fff;
+}
+/*Admin Kappa*/
+.search-bar-2{
+display:flex;
+align-items: center;
+}
+.search-bar-2 .form-control {
+background-color: #2d2d2d;
+color: white;
+border: none;
+padding: 15px;
+}
+
+.search-bar-2 .btn{
+margin-left:0.5rem;
+padding: 0.5rem 1rem;
+font-size: 1rem;
+}
+.top-search-text{
+color:white;
+display:block;
+margin-bottom:0.5rem;
+}
+/*Admin Kappa*/
+/*Admin Add Datasets*/
+.dataset-creation-box {
+background-color: #ffffff;
+border-radius: 8px;
+padding: 20px;
+}
+
+.red-border-box {
+border: 2px solid red;
+border-radius: 8px;
+}
+
+.btn-purple {
+background-color: #d3a8ff;
+color: #fff;
+border: none;
+}
+
+.btn-purple:hover {
+background-color: #b68fe6;
+}
+
+#textEntriesList span {
+font-weight: 500;
+color: white;
+}
+
+#textEntriesList .btn-sm {
+font-size: 0.9em;
+}
+
+.form-label{
+color:white;
+}
+/*Admin Add Datasets*/
+/*Admin Add User Text*/
+.container .card {
+background-color: #1a1a1a;
+color: white;
+border-radius: 10px;
+padding: 20px;
+border: 2px solid #ff4d4d;
+}
+
+.button-container {
+display: flex;
+justify-content: center;
+gap: 15px;
+margin-bottom: 15px;
+}
+
+.button-container .btn {
+font-weight: bold;
+padding: 8px 20px;
+border-radius: 5px;
+color: white;
+}
+
+.button-container .btn-success {
+background-color: #28a745;
+border: none;
+}
+
+.button-container .btn-danger {
+background-color: #dc3545;
+border: none;
+}
+
+#approvalList {
+list-style-type: none;
+padding: 0;
+margin: 0 0 15px;
+}
+
+#approvalList li {
+display: flex;
+align-items: center;
+justify-content: space-between;
+background-color: #333;
+padding: 10px 15px;
+border-radius: 5px;
+margin-bottom: 10px;
+}
+
+.item-number {
+width: 30px;
+text-align: center;
+font-weight: bold;
+color: #fff;
+}
+
+.item-text {
+flex: 2;
+color: #fff;
+}
+
+.item-date, .item-admin {
+flex: 1;
+text-align: right;
+font-size: 0.9rem;
+color: #bbb;
+}
+
+.item-checkbox {
+margin-left: 10px;
+transform: scale(1.2);
+accent-color: #ff4d4d;
+}
+
+.add-text-button {
+font-size: 0.9rem;
+font-weight: bold;
+padding: 10px 20px;
+border-radius: 5px;
+background-color: #28a745;
+color: white;
+margin-top: 10px;
+display: inline-block;
+align-self: center;
+}
+/*Admin Add User Text*/
+
+
 /* Responsive behavior */
 @media (max-width: 768px) {
   .annotation-section .annotation-row {

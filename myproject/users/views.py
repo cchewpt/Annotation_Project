@@ -3,9 +3,12 @@ from django.contrib.auth import authenticate,login as auth_login
 from django.db import connection
 from django.contrib import messages
 from io import TextIOWrapper
-from .models import user_map, Users, ProposedText, ProposedFile,Admins,Task,AnnotatedText
+from .models import user_map, Users, ProposedText, ProposedFile,Admins,Task,AnnotatedText,UserTask
 import bcrypt  # Import bcrypt for password hashing
 import logging
+from django.core.paginator import Paginator
+import json
+import uuid
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -17,6 +20,7 @@ from django.utils.timezone import now
 from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 import csv
+import datetime
 import xml.etree.ElementTree as ET
 from django.core.files.storage import FileSystemStorage
 from django.contrib.auth import get_user
@@ -32,8 +36,10 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
-
-
+from django.utils.crypto import get_random_string
+from django.http import JsonResponse
+from django.http import Http404
+logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -344,20 +350,65 @@ def admin_edit_user2(request, user_id):
 
     return redirect('login')  # Redirect to login page if not authenticated
 
-def admin_assign_data(request):
-    if request.user.is_authenticated and isinstance(request.user, Admins):
-        admin = request.user  # Now guaranteed to be an instance of Admins
+def admin_assign_data(request, task_id):
+    if request.method == 'GET':
+        user_ids = request.GET.get('user_ids', '').split(',')  # Get user IDs from query params
 
-        return render(request, 'accounts/admin_assign_data.html', {
-            'username': admin.admin_username,  # Use admin-specific fields
-            'user_id': admin.admin_id,
-            'email': admin.admin_email,
-            'tel': admin.admin_tel,
-            'user_lname': admin.admin_lname,
-            'user_fname': admin.admin_name
-        })
-    # Redirect to login if not authenticated or not an Admins instance
+        if user_ids:
+            try:
+                task = Task.objects.get(pk=task_id)  # Get the task object
+            except Task.DoesNotExist:
+                return render(request, 'error.html', {'message': 'Task does not exist'})
+
+            for user_id in user_ids:
+                try:
+                    user = Users.objects.get(pk=user_id)  # Get the user object
+                    # Create UserTask instance
+                    user_task = UserTask.objects.create(
+                        user=user,
+                        task=task,
+                        assigned_date=timezone.now(),
+                        latest_assign_date=timezone.now(),
+                        user_task_id=generate_user_task_id()  # Call your ID generation function
+                    )
+                except Users.DoesNotExist:
+                    print(f'User with id {user_id} does not exist.')
+
+            return redirect('admin_mng_datasets1')  # Redirect after processing
+        else:
+            return render(request, 'admin_mng_datasets1.html', {'message': 'No users selected'})
     return redirect('login')
+
+def assign_user_tasks(request):
+    if request.method == 'GET':
+            user_ids = request.GET.get('user_ids', '').split(',')  # Get user IDs from query params
+            task_id = request.GET.get('task_id')
+
+            if task_id and user_ids:
+                try:
+                    task = Task.objects.get(pk=task_id)  # Get the task object
+                except Task.DoesNotExist:
+                    return render(request, 'error.html', {'message': 'Task does not exist'})
+
+                for user_id in user_ids:
+                    try:
+                        user = Users.objects.get(pk=user_id)  # Get the user object
+                        # Create UserTask instance
+                        user_task = UserTask.objects.create(
+                            user=user,
+                            task=task,
+                            assigned_date=timezone.now(),
+                            latest_assign_date=timezone.now(),
+                            user_task_id=generate_user_task_id()  # Call your ID generation function
+                        )
+                    except Users.DoesNotExist:
+                        print(f'User with id {user_id} does not exist.')
+
+                return redirect('success_page')  # Redirect after processing
+            else:
+                return render(request, 'error.html', {'message': 'No users or task selected'})
+    return redirect('login')
+
 
 def admin_mng_datasets1(request):
     if request.user.is_authenticated and isinstance(request.user, Admins):
@@ -365,7 +416,14 @@ def admin_mng_datasets1(request):
         
         # Retrieve tasks associated with the admin or all tasks as needed
         tasks = Task.objects.all()  # Retrieve all tasks or filter as necessary
-
+        
+        # Retrieve all users for the dropdown
+        users = Users.objects.all()  # Fetch all users; modify if needed
+        
+        filtered_proposed_texts = ProposedText.objects.filter(
+            word_class_type__isnull=True,
+            word_status="อนุมัติ"
+        )
         return render(request, 'accounts/admin_mng_datasets1.html', {
             'username': admin.admin_username,
             'user_id': admin.admin_id,
@@ -373,9 +431,104 @@ def admin_mng_datasets1(request):
             'tel': admin.admin_tel,
             'user_lname': admin.admin_lname,
             'user_fname': admin.admin_name,
-            'tasks': tasks,  # Pass tasks to the template
+            'tasks': tasks,
+            'users': users,  # Pass users to the template
+            'proposed_texts': filtered_proposed_texts  # Pass tasks to the template
+        })
+    
+    # Redirect to login if not authenticated or not an Admins instance
+    return redirect('login')
+
+def admin_add_userText(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user  # Guaranteed to be an instance of Admins
+
+        # Retrieve ProposedText entries where word_class_type is null and word_status is "อนุมัติ"
+        filtered_proposed_texts = ProposedText.objects.filter(
+            word_class_type__isnull=True,
+            word_status="อนุมัติ"
+        )
+
+        return render(request, 'accounts/admin_add_userText.html', {
+            'username': admin.admin_username,
+            'user_id': admin.admin_id,
+            'email': admin.admin_email,
+            'tel': admin.admin_tel,
+            'user_lname': admin.admin_lname,
+            'user_fname': admin.admin_name,
+            'proposed_texts': filtered_proposed_texts,  # Pass filtered proposed texts
         })
     # Redirect to login if not authenticated or not an Admins instance
+    return redirect('login')
+
+@login_required
+def admin_add_datasets(request):
+    print("User authenticated:", request.user.is_authenticated)  # Debugging
+    print("User type:", type(request.user))  # Debugging
+
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        if request.method == 'POST':
+            # Extract form data
+            task_name = request.POST.get('task_name')
+            created_date = request.POST.get('created_date')
+            due_date = request.POST.get('due_date')
+            annotated_texts = request.POST.get('annotated_texts')
+            annotated_ids = request.POST.get('annotated_ids')
+
+            # Parse JSON data from strings
+            try:
+                annotated_texts_list = json.loads(annotated_texts) if annotated_texts else []
+                annotated_ids_list = json.loads(annotated_ids) if annotated_ids else []
+            except json.JSONDecodeError as e:
+                print("Error decoding JSON:", e)
+                return JsonResponse({'success': False, 'error': 'Invalid JSON format'})
+
+            # Verify lengths of lists match
+            if len(annotated_texts_list) != len(annotated_ids_list):
+                print("Mismatch between lengths of annotated_texts and annotated_ids")
+                return JsonResponse({'success': False, 'error': 'Length mismatch'})
+
+            # Generate new task and annotated texts
+            try:
+                task_id = generate_task_id()
+                task = Task.objects.create(
+                    task_id=task_id,
+                    task_name=task_name,
+                    created_date=created_date,
+                    due_date=due_date,
+                    admin=request.user,
+                    kappa_score=0.0,
+                    task_status=0,
+                )
+
+                # Save each annotated text entry
+                for idx, annotated_text in enumerate(annotated_texts_list):
+                    annotated_id = generate_unique_annotated_id()  # Ensure unique annotated_id
+                    AnnotatedText.objects.create(
+                        annotated_id=annotated_id,
+                        annotated_text=annotated_text,
+                        task_id=task,
+                        annotated_class=0,
+                        annotated_type="รอกำกับ",
+                        text_id=None,
+                    )
+
+                return redirect('admin_mng_datasets1')
+
+            except Exception as e:
+                print("Error creating task or annotated text:", e)
+                return JsonResponse({'success': False, 'error': 'Database error'})
+
+        # For GET request, retrieve proposed texts and render the form
+        filtered_proposed_texts = ProposedText.objects.filter(
+            word_class_type__isnull=True,
+            word_status="อนุมัติ"
+        )
+        return render(request, 'accounts/admin_add_datasets.html', {
+            'proposed_texts': filtered_proposed_texts  # Pass the proposed texts to the template
+        })
+
+    # Redirect if user not authenticated or not an Admin
     return redirect('login')
 
 
@@ -403,8 +556,6 @@ def mainlogin(request):
     print("User is not authenticated. Redirecting to login.")
     return redirect('login')
     
-    print("User is not authenticated. Redirecting to login.")  # Debugging line
-    return redirect('login')  # Redirect to login page if not authenticated
 
 def annotatepage(request):
     if request.user.is_authenticated:
@@ -452,6 +603,36 @@ def userannotatehist(request):
     else:
         return redirect('login')
 
+def usersannotating(request, task_id):
+    if request.user.is_authenticated:
+        try:
+            task = Task.objects.get(pk=task_id)  # Get the task object
+            # Fetch the annotated texts for this task
+            annotated_texts = AnnotatedText.objects.filter(task_id=task)  # Assuming task_id is a foreign key in AnnotatedText
+        except Task.DoesNotExist:
+            raise Http404("Task does not exist")
+
+        # Get the index for the current annotated text (e.g., the first one)
+        current_index = 0  # Adjust this based on your application's logic
+        current_text = annotated_texts[current_index] if annotated_texts else None
+
+        proposed_text_count = ProposedText.objects.filter(user=request.user).count()
+        supervised_text_count = ProposedText.objects.filter(user=request.user, word_status='กำกับแล้ว').count()
+
+        return render(request, 'accounts/usersannotating.html', {
+            'task_id': task.task_id,
+            'task_name': task.task_name,
+            'assigned_users': UserTask.objects.filter(task=task),
+            'proposed_text_count': proposed_text_count,
+            'supervised_text_count': supervised_text_count,
+            'current_text': current_text,
+            'current_index': current_index + 1,  # Pass the current index + 1 to display as 1-based index
+            'annotated_texts': annotated_texts  # Pass all annotated texts if needed
+        })
+    else:
+        return redirect('login')
+    
+
 def annotateselect(request):
     if request.user.is_authenticated:
         user = request.user
@@ -460,7 +641,10 @@ def annotateselect(request):
         proposed_text_count = ProposedText.objects.filter(user=user).count()
 
         # Count texts that the user supervised (assuming some field tracks this, like word_status)
-        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
+        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()
+
+        # Fetch tasks assigned to the current user
+        user_tasks = UserTask.objects.filter(user=user)  # Assuming `user` is a ForeignKey in UserTask
 
         return render(request, 'accounts/annotateselect.html', {
             'username': user.username,
@@ -470,12 +654,80 @@ def annotateselect(request):
             'user_lname': user.user_lname,
             'user_fname': user.user_fname,
             'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
-            'supervised_text_count': supervised_text_count  # Pass the count of supervised texts
+            'supervised_text_count': supervised_text_count,  # Pass the count of supervised texts
+            'user_tasks': user_tasks  # Pass the user's tasks to the template
         })
     else:
         return redirect('login')
+    
+@csrf_exempt
+def update_annotation(request, annotated_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            annotated_class = data.get('annotated_class')
+            annotated_type = data.get('annotated_type')
 
-logger = logging.getLogger(__name__)
+            # Find the annotation by id
+            annotation = AnnotatedText.objects.get(annotated_id=annotated_id)
+
+            # Update fields
+            annotation.annotated_class = annotated_class
+            annotation.annotated_type = annotated_type
+            annotation.save()  # Save changes to the database
+
+            return JsonResponse({"success": True, "message": "Annotation updated successfully."})
+        except AnnotatedText.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Annotated text not found"})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+    return JsonResponse({"success": False, "error": "Invalid request method"})
+
+@csrf_exempt  # Add this if you are not using CSRF tokens in AJAX requests
+def update_annotated_class(request, annotated_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)  # Get the JSON data
+            annotated_class = data.get('annotated_class')
+            annotated_text = AnnotatedText.objects.get(annotated_id=annotated_id)  # Get the annotated text object
+            
+            annotated_text.annotated_class = annotated_class  # Update the class value
+            annotated_text.save()  # Save the changes
+
+            return JsonResponse({'success': True}, status=200)
+        except AnnotatedText.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'AnnotatedText not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
+
+def get_next_text(request, index):
+    if request.method == 'POST' and request.user.is_authenticated:
+        try:
+            # Fetch the annotated text based on the provided index
+            annotated_text = AnnotatedText.objects.all()[index]  # You might want to handle index out of range
+            response_data = {
+                'success': True,
+                'annotated_text': annotated_text.annotated_text,  # Assuming your model has a field called 'annotated_text'
+            }
+        except IndexError:
+            # Handle the case where the index is out of bounds
+            response_data = {
+                'success': False,
+                'message': 'No more annotated texts available.',
+            }
+        except Exception as e:
+            # Handle other potential exceptions
+            response_data = {
+                'success': False,
+                'message': str(e),
+            }
+
+        return JsonResponse(response_data)
+    else:
+        return JsonResponse({'success': False, 'message': 'Invalid request.'})
+
 def forgotpass(request):
     if request.method == "POST":
         email = request.POST.get('email')
@@ -884,3 +1136,26 @@ def generate_upload_id() -> str:
         
     return upload_id
 
+def generate_unique_annotated_id():
+    while True:
+        annotated_id = random.randint(1000000, 9999999)  # Generate a 7-digit number
+        if not AnnotatedText.objects.filter(annotated_id=annotated_id).exists():  # Ensure uniqueness
+            return annotated_id
+
+def generate_task_id():
+    while True:
+        # Generate a random 6-digit number
+        task_id = str(random.randint(100000, 999999))
+        
+        # Check if the generated task_id already exists in the database
+        if not Task.objects.filter(task_id=task_id).exists():
+            return task_id  # Return the unique task_id
+
+
+def generate_user_task_id():
+    while True:
+        # Generate a random 6-digit number
+        user_task_id = str(random.randint(100000, 999999))
+        # Check if it already exists in the UserTask table
+        if not UserTask.objects.filter(user_task_id=user_task_id).exists():
+            return user_task_id

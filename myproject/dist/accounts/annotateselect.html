@@ -66,91 +66,28 @@
 
         <!--เลือกชุดข้อความการกำกับ-->
         <div class="container my-5 p-4 box-container">
-            <div class="row">
-                <!-- Red-bordered boxes (full width for one-column layout) -->
-                <div class="col-12 mb-4">
-                    <div class="annotate-box d-flex justify-content-between align-items-center">
-                        <!--Left-->
-                        <div>
-                            <p class="fw-bold mb-1">ชุดข้อความการกำกับกับข้อความชุดที่ 5</p>
-                            <p class="mb-1">ข้อความที่กำกับแล้ว 0/15</p>
+            <div class="container">
+                <h3>งานที่คุณได้รับมอบหมาย</h3>
+                <div class="row">
+                    {% for task in user_tasks %}
+                        <div class="col-12 mb-4">
+                            <div class="annotate-box d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="fw-bold mb-1">{{ task.task.task_name }}</p> <!-- Assuming you have a task_name in the Task model -->
+                                    <p class="mb-1">ข้อความที่กำกับแล้ว {{ task.supervised_count }}/{{ task.total_count }}</p> <!-- Adjust as needed -->
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <p class="mb-0 me-6">โดย Admin: {{ task.admin.admin_fname }}</p> <!-- Assuming there's an admin field in UserTask -->
+                                    <p class="mb-0 me-5">ระยะเวลา  {{ task.task.created_date|date:"d F Y" }}  ถึง  {{ task.task.due_date|date:"d F Y" }}</p> <!-- Format date as needed -->
+                                </div>
+                                <div>
+                                    <a href="{% url 'usersannotating' task.task_id %}" class="btn btn-primary">กำกับข้อความ</a> <!-- Adjust the URL as needed -->
+                                </div>
+                            </div>
                         </div>
-
-                        <!--Center-->
-                        <div class="d-flex align-items-center mid-style">
-                            <p class="mb-0 me-6">โดย Admin: saya9833</p>
-                            <p class="mb-0 me-5">ระยะเวลา 3 เมษายน 2567 ถึง 13 เมษายน 2567</p>
-                        </div>
-
-                        <!--Right-->
-                        <div>
-                            <a href="../dist/selecteddatasets.html" class="btn btn-primary">กำกับข้อความ</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 mb-4">
-                    <div class="annotate-box d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="fw-bold mb-1">ชุดข้อความการกำกับกับข้อความชุดที่ 4</p>
-                            <p class="mb-1">ข้อความที่กำกับแล้ว 0/15</p>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <p class="mb-0 me-6">โดย Admin: saya9833</p>
-                            <p class="mb-0 me-5">ระยะเวลา 3 เมษายน 2567 ถึง 13 เมษายน 2567</p>
-                        </div>
-                        <div>
-                            <a href="../dist/selecteddatasets.html" class="btn btn-primary">กำกับข้อความ</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 mb-4">
-                    <div class="annotate-box d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="fw-bold mb-1">ชุดข้อความการกำกับกับข้อความชุดที่ 3</p>
-                            <p class="mb-1">ข้อความที่กำกับแล้ว 0/15</p>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <p class="mb-0 me-6">โดย Admin: guy2279</p>
-                            <p class="mb-0 me-5">ระยะเวลา 3 เมษายน 2567 ถึง 13 เมษายน 2567</p>
-                        </div>
-                        <div>
-                            <a href="../dist/selecteddatasets.html" class="btn btn-primary">กำกับข้อความ</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 mb-4">
-                    <div class="annotate-box d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="fw-bold mb-1">ชุดข้อความการกำกับกับข้อความชุดที่ 2</p>
-                            <p class="mb-1">ข้อความที่กำกับแล้ว 0/15</p>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <p class="mb-0 me-6">โดย Admin: guy2279</p>
-                            <p class="mb-0 me-5">ระยะเวลา 3 เมษายน 2567 ถึง 13 เมษายน 2567</p>
-                        </div>
-                        <div>
-                            <a href="../dist/selecteddatasets.html" class="btn btn-primary">กำกับข้อความ</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 mb-4">
-                    <div class="annotate-box d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="fw-bold mb-1">ชุดข้อความการกำกับกับข้อความชุดที่ 1</p>
-                            <p class="mb-1">ข้อความที่กำกับแล้ว 0/15</p>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <p class="mb-0 me-6">โดย Admin: guy2279</p>
-                            <p class="mb-0 me-5">ระยะเวลา 3 เมษายน 2567 ถึง 13 เมษายน 2567</p>
-                        </div>
-                        <div>
-                            <a href="../dist/selecteddatasets.html" class="btn btn-primary">กำกับข้อความ</a>
-                        </div>
-                    </div>
+                    {% empty %}
+                        <p>คุณยังไม่มีงานที่ได้รับมอบหมาย</p>
+                    {% endfor %}
                 </div>
             </div>
             <!--เลือกชุดข้อความการกำกับ-->

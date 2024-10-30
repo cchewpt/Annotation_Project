@@ -6,6 +6,7 @@ import bcrypt
 import uuid
 import os
 from django.utils.timezone import now
+from django.utils.crypto import get_random_string
 from django.core.exceptions import ValidationError
 
 class user_map(models.Model):
@@ -131,17 +132,38 @@ class ProposedFile(models.Model):
     def __str__(self):
         return self.file_name
 
+class AnnotatedText(models.Model):
+    annotated_id = models.BigIntegerField(  # Use BigIntegerField for larger numeric values
+        unique=True,
+        primary_key=True,
+        db_column='annotated_id'
+    )
+    task_id = models.ForeignKey(
+        'Task',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column='task_id'
+    )
+    annotated_class = models.SmallIntegerField(db_column='annotated_class')
+    annotated_type = models.CharField(max_length=30, null=True, blank=True,default="1", db_column='annotated_type')
+    annotated_text = models.TextField(db_column='annotated_text')
+    annotated_date = models.DateTimeField(auto_now_add=True, db_column='annotated_date')
+    text_id = models.ForeignKey('ProposedText', on_delete=models.CASCADE, null=True, blank=True, db_column='text_id')
+
+    class Meta:
+        db_table = 'annotated_text'
+
 class Task(models.Model):
-    task_id = models.AutoField(primary_key=True)
-    annotated_id = models.IntegerField(null=True, blank=True)
+    task_id = models.CharField(max_length=6, unique=True, primary_key=True, db_column='task_id')  # Set max_length to 6
     admin = models.ForeignKey(
         'Admins',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         db_column='admin_id'
-    )  # ForeignKey relationship to Admins
-    task_name = models.CharField(max_length=50,db_column='task_name')
+    )
+    task_name = models.CharField(max_length=50, db_column='task_name')
     created_date = models.DateField(db_column='created_date')
     due_date = models.DateField(db_column='due_date')
     kappa_score = models.FloatField(db_column='kappa_score')
@@ -153,19 +175,17 @@ class Task(models.Model):
     def __str__(self):
         return self.task_name
     
-class AnnotatedText(models.Model):
-    annotated_id = models.CharField(max_length=25, unique=True, primary_key=True,db_column='annotated_id')  # Primary key (auto-incremented)
-    annotated_task_id = models.IntegerField(db_column='annotated_task_id')  # Task ID related to the annotation
-    annotated_class = models.SmallIntegerField(db_column='annotated_class')  # Class of the annotation
-    annotated_type = models.CharField(max_length=5,db_column='annotated_type')  # Type of the annotation
-    annotated_text = models.TextField(db_column='annotated_text')  # The annotated text
-    annotated_date = models.DateTimeField(auto_now_add=True,db_column='annotated_date')  # Date of annotation creation
-    text_id = models.ForeignKey(ProposedText, on_delete=models.CASCADE,db_column='text_id')  # Foreign key to ProposedText
-
-    class Meta:
-        db_table = 'annotated_text'  # Database table name for AnnotatedText
-        verbose_name = 'Annotated Text'  # Human-readable name for the model
-        verbose_name_plural = 'Annotated Texts'  # Human-readable plural name
+class UserTask(models.Model):
+    user_task_id = models.AutoField(primary_key=True)  # Primary Key
+    task = models.ForeignKey(Task, on_delete=models.CASCADE)  # Foreign Key to Task
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)  # Foreign Key to User
+    assigned_date = models.DateField()  # Date when the task was assigned
+    latest_assign_date = models.DateField()  # Latest date the task was assigned
 
     def __str__(self):
-        return f"AnnotatedText(id={self.annotated_id}, text_id={self.text_id})"
+        return f"UserTask {self.user_task_id} - User: {self.user.username}, Task: {self.task}"
+
+    class Meta:
+        db_table = 'user_task'
+        verbose_name = "User Task"
+        verbose_name_plural = "User Tasks"

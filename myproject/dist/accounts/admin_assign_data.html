@@ -174,269 +174,59 @@
             </div>
           
             <!-- Scrollable User Profile List -->
-            <div class="scrollable-user-list1">
-              <div class="row g-3">
-                <!-- User Profiles (as you already have them) -->
-                <div class="col-md-6">
-                  <div class="card user-card">
-                    <div class="card-body d-flex align-items-center">
-                      <img
-                        src="../static/assets/profile-placeholder.png"
-                        class="rounded-circle me-3"
-                        alt="User profile image"
-                        style="width: 60px; height: 60px;"
-                      />
-                      <div>
-                        <h5 class="card-title mb-0">ชื่อผู้ใช้: vav2813</h5>
-                        <p class="card-text">รหัสผู้ใช้: 003</p>
+            <form method="post" action="{% url 'assign_user_tasks' %}">
+              {% csrf_token %}
+              <div class="scrollable-user-list1">
+                  <div class="row">
+                      {% for user in users %}
+                      <div class="col-md-6">
+                          <div class="card user-card mb-3">
+                              <div class="card-body d-flex align-items-center">
+                                  <img
+                                      src="{% static 'assets/profile-placeholder.png' %}"
+                                      class="rounded-circle me-3"
+                                      alt="User profile image"
+                                      style="width: 60px; height: 60px;"
+                                  />
+                                  <div>
+                                      <h5 class="card-title mb-0">ชื่อผู้ใช้: {{ user.username }}</h5> <!-- Use the correct username field -->
+                                      <p class="card-text">รหัสผู้ใช้: {{ user.user_id }}</p> <!-- Use the correct user_id field -->
+                                  </div>
+                                  <input type="checkbox" name="user_ids" value="{{ user.user_id }}" class="ms-auto" />
+                              </div>
+                          </div>
                       </div>
-                      <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                    </div>
+                      {% empty %}
+                      <p>ไม่พบผู้ใช้งานที่ตรงกับการค้นหา</p>
+                      {% endfor %}
                   </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: wee1415</h5>
-                          <p class="card-text">รหัสผู้ใช้: 001</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: sar1923</h5>
-                          <p class="card-text">รหัสผู้ใช้: 002</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: jun1834</h5>
-                          <p class="card-text">รหัสผู้ใช้: 004</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: karn5548</h5>
-                          <p class="card-text">รหัสผู้ใช้: 007</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-                
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: gun2219</h5>
-                          <p class="card-text">รหัสผู้ใช้: 005</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: tpe4493</h5>
-                          <p class="card-text">รหัสผู้ใช้: 010</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: king3820</h5>
-                          <p class="card-text">รหัสผู้ใช้: 008</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: lim8093</h5>
-                          <p class="card-text">รหัสผู้ใช้: 012</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: guy9854</h5>
-                          <p class="card-text">รหัสผู้ใช้: 0014</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: pun8975</h5>
-                          <p class="card-text">รหัสผู้ใช้: 009</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: mix2124</h5>
-                          <p class="card-text">รหัสผู้ใช้: 013</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-    
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: mick2934</h5>
-                          <p class="card-text">รหัสผู้ใช้: 018</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-md-6">
-                    <div class="card user-card">
-                      <div class="card-body d-flex align-items-center">
-                        <img
-                          src="../static/assets/profile-placeholder.png"
-                          class="rounded-circle me-3"
-                          alt="User profile image"
-                          style="width: 60px; height: 60px;"
-                        />
-                        <div>
-                          <h5 class="card-title mb-0">ชื่อผู้ใช้: toy8605</h5>
-                          <p class="card-text">รหัสผู้ใช้: 017</p>
-                        </div>
-                        <a href="#" class="btn btn-primary ms-auto">มอบหมาย</a>
-                      </div>
-                    </div>
-                  </div>
-                
               </div>
-            </div>
+              <input type="hidden" name="task_ids" value="{{ task_ids|join:',' }}">
+              <button type="submit" class="btn btn-primary mt-3">มอบหมายงาน</button>
+          </form>
           </div>
           
         </div>
       </div>
     </main>
-
+    <script>
+      function assignTasks() {
+          const selectedTasks = [];
+          const taskCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+  
+          taskCheckboxes.forEach((checkbox) => {
+              selectedTasks.push(checkbox.value);  // Collect selected task IDs
+          });
+  
+          if (selectedTasks.length > 0) {
+              // Redirect to user assignment page, passing the task IDs
+              const taskIds = selectedTasks.join(','); // Join task IDs into a string
+              location.href = "{% url 'admin_assign_data' %}?task_ids=" + taskIds;
+          } else {
+              alert("กรุณาเลือกชุดข้อมูลอย่างน้อยหนึ่งชุด."); // Prompt user to select at least one task
+          }
+      }
+    </script>
     <!-- Footer-->
     <footer class="bg-brightred py-4 mt-auto">
       <div class="container px-5">
