@@ -351,32 +351,55 @@ def admin_edit_user2(request, user_id):
     return redirect('login')  # Redirect to login page if not authenticated
 
 def admin_assign_data(request, task_id):
-    if request.method == 'GET':
-        user_ids = request.GET.get('user_ids', '').split(',')  # Get user IDs from query params
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        if request.method == 'GET':
+            # Retrieve the list of user IDs from the query parameters
+            user_ids = request.GET.get('user_ids')
+            if user_ids:
+                user_ids_list = user_ids.split(',')  # Convert to a list of user IDs
 
-        if user_ids:
-            try:
-                task = Task.objects.get(pk=task_id)  # Get the task object
-            except Task.DoesNotExist:
-                return render(request, 'error.html', {'message': 'Task does not exist'})
-
-            for user_id in user_ids:
                 try:
-                    user = Users.objects.get(pk=user_id)  # Get the user object
-                    # Create UserTask instance
-                    user_task = UserTask.objects.create(
-                        user=user,
-                        task=task,
-                        assigned_date=timezone.now(),
-                        latest_assign_date=timezone.now(),
-                        user_task_id=generate_user_task_id()  # Call your ID generation function
-                    )
-                except Users.DoesNotExist:
-                    print(f'User with id {user_id} does not exist.')
+                    # Retrieve the task object by task_id
+                    task = Task.objects.get(task_id=task_id)
+                    
+                    # Retrieve the texts associated with the task
+                    task_texts = AnnotatedText.objects.filter(task_id=task_id).values_list('annotated_text', flat=True)
 
-            return redirect('admin_mng_datasets1')  # Redirect after processing
-        else:
-            return render(request, 'admin_mng_datasets1.html', {'message': 'No users selected'})
+                    # Iterate over each user and each text in the task to create entries
+                    for user_id in user_ids_list:
+                        user = Users.objects.get(user_id=user_id)  # Retrieve the user object
+                        try:
+                            user = Users.objects.get(pk=user_id)  # Get the user object
+                            # Create UserTask instance
+                            user_task = UserTask.objects.create(
+                                user=user,
+                                task=task,
+                                assigned_date=timezone.now(),
+                                latest_assign_date=timezone.now(),
+                                user_task_id=generate_user_task_id()  # Call your ID generation function
+                            )
+                        except Users.DoesNotExist:
+                            print(f'User with id {user_id} does not exist.')
+                        for text in task_texts:
+                            # Generate a unique annotated_id and create an entry for each text-user combination
+                            annotated_id = generate_unique_annotated_id()
+                            AnnotatedText.objects.create(
+                                annotated_id=annotated_id,
+                                task_id=task,  # Use 'task_id' as per the model definition
+                                user=user,  # Assign the user to this entry
+                                annotated_text=text,  # Assign the text
+                                annotated_class=0,
+                                annotated_type="รอกำกับ",
+                                text_id=None,
+                            )
+
+                    return redirect('admin_mng_datasets1')
+
+                except Task.DoesNotExist:
+                    return redirect('admin_mng_datasets1')
+
+            return redirect('admin_mng_datasets1')
+
     return redirect('login')
 
 def assign_user_tasks(request):
@@ -409,6 +432,118 @@ def assign_user_tasks(request):
                 return render(request, 'error.html', {'message': 'No users or task selected'})
     return redirect('login')
 
+def calculate_fleiss_kappa(annotated_texts):
+    # Use a set to track unique annotated texts that have a user_id
+    unique_annotated_texts = {}
+    
+    for text in annotated_texts:
+        if text.user_id is not None:
+            unique_annotated_texts[text.annotated_text] = text  # Keep the reference to the text
+
+    # Convert back to a list from the dictionary values
+    filtered_annotated_texts = list(unique_annotated_texts.values())
+    
+    print(f"DEBUG: Filtered annotated texts count (with user_id, unique annotated_text): {len(filtered_annotated_texts)}")  # Debug statement
+
+    # Create a count matrix
+    class_counts = {}
+    
+    for text in filtered_annotated_texts:
+        # Initialize class count if not already present
+        if text.annotated_class not in class_counts:
+            class_counts[text.annotated_class] = {}
+        if text.annotated_text not in class_counts[text.annotated_class]:
+            class_counts[text.annotated_class][text.annotated_text] = 0
+        class_counts[text.annotated_class][text.annotated_text] += 1
+
+    print(f"DEBUG: Class counts: {class_counts}")  # Debug statement
+
+    # Count of unique annotated texts
+    N = len(unique_annotated_texts)  # Count of unique annotated texts
+    num_classes = len(class_counts)
+
+    print(f"DEBUG: Total number of unique annotations (N): {N}")  # Updated debug statement
+    print(f"DEBUG: Number of unique classes: {num_classes}")  # Debug statement
+
+    if N < 2:  # Not enough data to calculate kappa
+        print("DEBUG: Not enough annotated texts to calculate kappa.")
+        return 0.0
+
+    # Create a matrix where rows are annotated texts and columns are classes
+    rating_matrix = []
+    
+    for text in unique_annotated_texts.keys():
+        row = []
+        for class_id in range(num_classes):
+            count = class_counts.get(class_id, {}).get(text, 0)
+            row.append(count)
+            print(f"DEBUG: Annotated text '{text}', Class {class_id}: {count}")  # Debug statement
+        rating_matrix.append(row)
+
+    print(f"DEBUG: Rating matrix: {rating_matrix}")  # Debug statement
+
+    # Calculate P_o (observed agreement)
+    P_o = sum(sum(n_i * (n_i - 1) for n_i in row) for row in rating_matrix) / (N * (N - 1)) if N > 1 else 0
+    print(f"DEBUG: Observed agreement (P_o): {P_o}")  # Debug statement
+
+    # Calculate P_e (expected agreement)
+    total_per_class = [sum(row[i] for row in rating_matrix) for i in range(num_classes)]
+    print(f"DEBUG: Total counts per class: {total_per_class}")  # Debug statement
+    
+    if N == 0:
+        P_e = 0
+    else:
+        P_e = sum((n_i / N) ** 2 for n_i in total_per_class)
+
+    print(f"DEBUG: Expected agreement (P_e): {P_e}")  # Debug statement
+
+    # Calculate Fleiss' Kappa
+    if (1 - P_e) != 0:
+        kappa = (P_o - P_e) / (1 - P_e)
+    else:
+        kappa = 1.0  # If expected agreement is zero, return 1 (perfect agreement)
+
+    # Ensure kappa is always a positive value
+    kappa = abs(kappa)  # Use absolute value to ensure positivity
+
+    print(f"DEBUG: Fleiss' Kappa value: {kappa}")  # Debug statement
+    return kappa
+
+
+def admin_kappa(request):
+    if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user  # Now guaranteed to be an instance of Admins
+
+        # Retrieve all tasks
+        tasks = Task.objects.all()
+        
+        task_data = []
+        for task in tasks:
+            # Retrieve annotated texts for each task
+            annotated_texts = AnnotatedText.objects.filter(task_id=task, user__isnull=False)
+            kappa_score = calculate_fleiss_kappa(annotated_texts)  # Calculate kappa score for the task
+            
+            # Update the task's kappa score in the database
+            task.kappa_score = kappa_score
+            task.save()
+
+            task_data.append({
+                'task': task,
+                'kappa_score': kappa_score
+            })
+
+        return render(request, 'accounts/admin_kappa.html', {
+            'username': admin.admin_username,
+            'user_id': admin.admin_id,
+            'email': admin.admin_email,
+            'tel': admin.admin_tel,
+            'user_lname': admin.admin_lname,
+            'user_fname': admin.admin_name,
+            'task_data': task_data  # Pass the task data to the template
+        })
+    
+    # Redirect to login if not authenticated or not an Admins instance
+    return redirect('login')
 
 def admin_mng_datasets1(request):
     if request.user.is_authenticated and isinstance(request.user, Admins):
@@ -603,35 +738,38 @@ def userannotatehist(request):
     else:
         return redirect('login')
 
-def usersannotating(request, task_id):
+def usersannotating(request, task_id, current_index):
     if request.user.is_authenticated:
         try:
             task = Task.objects.get(pk=task_id)  # Get the task object
-            # Fetch the annotated texts for this task
-            annotated_texts = AnnotatedText.objects.filter(task_id=task)  # Assuming task_id is a foreign key in AnnotatedText
+            
+            # Fetch the annotated texts for this task and the logged-in user
+            annotated_texts = AnnotatedText.objects.filter(task_id=task, user=request.user)  # Filter by user
+            
+            # Ensure current_index is within the bounds of annotated_texts
+            current_index = int(current_index)  # Convert to int for proper indexing
+            if current_index < 0 or current_index >= len(annotated_texts):
+                current_index = 0  # Reset to 0 if out of bounds
+            
+            current_text = annotated_texts[current_index] if annotated_texts else None
+
+            proposed_text_count = ProposedText.objects.filter(user=request.user).count()
+            supervised_text_count = ProposedText.objects.filter(user=request.user, word_status='กำกับแล้ว').count()
+
+            return render(request, 'accounts/usersannotating.html', {
+                'task_id': task.task_id,
+                'task_name': task.task_name,
+                'assigned_users': UserTask.objects.filter(task=task),
+                'proposed_text_count': proposed_text_count,
+                'supervised_text_count': supervised_text_count,
+                'current_text': current_text,
+                'current_index': current_index + 1,  # Pass the current index + 1 to display as 1-based index
+                'annotated_texts': annotated_texts  # Pass all annotated texts if needed
+            })
         except Task.DoesNotExist:
             raise Http404("Task does not exist")
-
-        # Get the index for the current annotated text (e.g., the first one)
-        current_index = 0  # Adjust this based on your application's logic
-        current_text = annotated_texts[current_index] if annotated_texts else None
-
-        proposed_text_count = ProposedText.objects.filter(user=request.user).count()
-        supervised_text_count = ProposedText.objects.filter(user=request.user, word_status='กำกับแล้ว').count()
-
-        return render(request, 'accounts/usersannotating.html', {
-            'task_id': task.task_id,
-            'task_name': task.task_name,
-            'assigned_users': UserTask.objects.filter(task=task),
-            'proposed_text_count': proposed_text_count,
-            'supervised_text_count': supervised_text_count,
-            'current_text': current_text,
-            'current_index': current_index + 1,  # Pass the current index + 1 to display as 1-based index
-            'annotated_texts': annotated_texts  # Pass all annotated texts if needed
-        })
     else:
         return redirect('login')
-    
 
 def annotateselect(request):
     if request.user.is_authenticated:
@@ -646,6 +784,12 @@ def annotateselect(request):
         # Fetch tasks assigned to the current user
         user_tasks = UserTask.objects.filter(user=user)  # Assuming `user` is a ForeignKey in UserTask
 
+        # Set a default current index
+        current_index = 0  # Adjust if needed, 0 for the first item
+
+        # Check if all annotations are completed
+        all_annotations_completed = request.session.pop('all_annotations_completed', False)  # Get and remove the flag
+
         return render(request, 'accounts/annotateselect.html', {
             'username': user.username,
             'user_id': user.user_id,
@@ -655,7 +799,9 @@ def annotateselect(request):
             'user_fname': user.user_fname,
             'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
             'supervised_text_count': supervised_text_count,  # Pass the count of supervised texts
-            'user_tasks': user_tasks  # Pass the user's tasks to the template
+            'user_tasks': user_tasks,  # Pass the user's tasks to the template
+            'current_index': current_index,  # Pass the current index to the template
+            'all_annotations_completed': all_annotations_completed  # Pass the completion flag
         })
     else:
         return redirect('login')
@@ -689,9 +835,11 @@ def update_annotated_class(request, annotated_id):
         try:
             data = json.loads(request.body)  # Get the JSON data
             annotated_class = data.get('annotated_class')
-            annotated_text = AnnotatedText.objects.get(annotated_id=annotated_id)  # Get the annotated text object
+            annotated_type = data.get('annotated_type')  # Get annotated_type from the data
+            annotated_text = AnnotatedText.objects.get(annotated_id=annotated_id)
             
             annotated_text.annotated_class = annotated_class  # Update the class value
+            annotated_text.annotated_type = annotated_type  # Update the type value
             annotated_text.save()  # Save the changes
 
             return JsonResponse({'success': True}, status=200)
@@ -702,31 +850,34 @@ def update_annotated_class(request, annotated_id):
 
     return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
 
-def get_next_text(request, index):
-    if request.method == 'POST' and request.user.is_authenticated:
-        try:
-            # Fetch the annotated text based on the provided index
-            annotated_text = AnnotatedText.objects.all()[index]  # You might want to handle index out of range
-            response_data = {
-                'success': True,
-                'annotated_text': annotated_text.annotated_text,  # Assuming your model has a field called 'annotated_text'
-            }
-        except IndexError:
-            # Handle the case where the index is out of bounds
-            response_data = {
-                'success': False,
-                'message': 'No more annotated texts available.',
-            }
-        except Exception as e:
-            # Handle other potential exceptions
-            response_data = {
-                'success': False,
-                'message': str(e),
-            }
+def confirm_annotation(request, task_id, current_index):
+    print(f"DEBUG: confirm_annotation called with task_id={task_id}, current_index={current_index}")
 
-        return JsonResponse(response_data)
-    else:
-        return JsonResponse({'success': False, 'message': 'Invalid request.'})
+    if request.method == 'POST':
+        # Adjusting for 1-based index by converting it to 0-based
+        current_index = int(current_index) - 1  # Convert to 0-based index
+        annotated_texts = AnnotatedText.objects.filter(task_id=task_id, user=request.user)  # Filter by user
+        annotated_count = annotated_texts.count()
+        print(f"DEBUG: Number of annotated texts found for user: {annotated_count}")
+
+        # Ensure the current_index is valid
+        if 0 <= current_index < annotated_count:
+            current_text = annotated_texts[current_index]
+            print(f"DEBUG: Current text to be confirmed: {current_text.annotated_text}")
+
+            # Check if there is a next annotation
+            if current_index + 1 < annotated_count:
+                print("DEBUG: Proceeding to next annotation.")
+                return redirect('confirm_annotation', task_id=task_id, current_index=current_index + 1)  # Increment for the next 1-based index
+            else:
+                print("DEBUG: Reached the end of annotations, redirecting to annotateselect.")
+                return redirect('annotateselect')
+        else:
+            print(f"DEBUG: current_index {current_index} is out of range (0 to {annotated_count - 1}).")
+
+    # If it's not a POST request, or if something goes wrong, redirect back to the user's annotating page
+    return redirect('usersannotating', task_id=task_id, current_index=current_index)  # Convert back to 1-based index for redirection
+
 
 def forgotpass(request):
     if request.method == "POST":

@@ -81,7 +81,7 @@
                                     <p class="mb-0 me-5">ระยะเวลา  {{ task.task.created_date|date:"d F Y" }}  ถึง  {{ task.task.due_date|date:"d F Y" }}</p> <!-- Format date as needed -->
                                 </div>
                                 <div>
-                                    <a href="{% url 'usersannotating' task.task_id %}" class="btn btn-primary">กำกับข้อความ</a> <!-- Adjust the URL as needed -->
+                                    <a href="{% url 'usersannotating' task_id=task.task_id current_index=current_index %}" class="btn btn-primary">กำกับข้อความ</a> <!-- Adjust the URL as needed -->
                                 </div>
                             </div>
                         </div>
@@ -90,7 +90,6 @@
                     {% endfor %}
                 </div>
             </div>
-            <!--เลือกชุดข้อความการกำกับ-->
             <!-- History button -->
             <div class="text-end mt-4">
                 <a href="#" class="btn btn-secondary">ประวัติการกำกับข้อความ</a>

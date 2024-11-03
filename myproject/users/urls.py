@@ -31,8 +31,9 @@ urlpatterns = [
     path('login/accounts/admin_add_datasets/', views.admin_add_datasets, name='admin_add_datasets'),
     path('login/accounts/admin_add_userText/', views.admin_add_userText, name='admin_add_userText'),
     path('login/accounts/admin_assign_data/<int:task_id>/', views.admin_assign_data, name='admin_assign_data'),
-    path('login/accounts/usersannotating/<int:task_id>/', views.usersannotating, name='usersannotating'),
+    path('usersannotating/<int:task_id>/<int:current_index>/', views.usersannotating, name='usersannotating'),
     path('update_annotated_class/<int:annotated_id>/', views.update_annotated_class, name='update_annotated_class'),
-    path('get_next_text/<int:index>/',views.get_next_text, name='get_next_text'),
-    path('update_annotation/<int:annotated_id>/', views.update_annotation, name='update_annotation')
+    path('update_annotation/<int:annotated_id>/', views.update_annotation, name='update_annotation'),
+    path('confirm_annotation/<int:task_id>/<int:current_index>/', views.confirm_annotation, name='confirm_annotation'),
+    path('login/accounts/admin_kappa/', views.admin_kappa, name='admin_kappa')
 ]

@@ -145,6 +145,7 @@ class AnnotatedText(models.Model):
         blank=True,
         db_column='task_id'
     )
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
     annotated_class = models.SmallIntegerField(db_column='annotated_class')
     annotated_type = models.CharField(max_length=30, null=True, blank=True,default="1", db_column='annotated_type')
     annotated_text = models.TextField(db_column='annotated_text')

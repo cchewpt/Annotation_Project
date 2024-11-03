@@ -84,7 +84,6 @@
                 <button class="bully-btn" id="bullyBtn">บูลลี่</button>
                 <button class="bully-btn" id="notBullyBtn">ไม่บูลลี่</button>
             </div>
-
             <!-- Bully Type Selection (Initially Disabled) -->
             <div class="bully-type-section">
                 <p class="bully-type-title">เป็นข้อความประเภทใด</p>
@@ -96,15 +95,18 @@
                     <button class="bully-type" id="bullyEmotion">บูลลี่ทางอารมณ์</button>
                     <button class="bully-type" id="bullyReligion">บูลลี่ด้านศาสนา</button>
                     <button class="bully-type" id="bullySocial">บูลลี่ทางด้านสังคม</button>
-                    <button class="bully-btn" id="notBullyBtn">ไม่บูลลี่</button>
                 </div>
             </div>
 
             <!-- Navigation Buttons -->
             <div class="nav-buttons d-flex justify-content-between">
-                <a href="../dist/selecteddatasets.html"><button class="nav-btn" id="backBtn">ย้อนกลับ</button></a>
-                <button class="nav-btn" id="confirmBtn" data-annotated-id="{{ annotated_id }}">ยืนยันคำตอบ</button>
-
+                <a href="../dist/selecteddatasets.html">
+                    <button class="nav-btn" id="backBtn">ย้อนกลับ</button>
+                </a>
+                <form method="POST" action="{% url 'confirm_annotation' task_id=task_id current_index=current_index %}">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-btn" id="confirmBtn" data-annotated-id="{{ current_text.annotated_id }}">ยืนยันคำตอบ</button>
+                </form>
             </div>
         </div>
         <!--Insert Between Here-->
@@ -135,56 +137,84 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            let annotatedClass = null; // Variable to hold the annotated class
-            let annotatedType = '';
             const bullyBtn = document.getElementById("bullyBtn");
             const notBullyBtn = document.getElementById("notBullyBtn");
-            const bullyButtons = document.querySelectorAll('.bully-type');
-        
-            // Set annotatedClass to 1 when "บูลลี่" button is clicked
+            const bullyTypeButtons = document.querySelectorAll(".bully-type");
+    
+            // Check if the all_annotations_completed flag is true
+            {% if all_annotations_completed %}
+                alert("คุณได้กำกับข้อความครบทั้งหมดแล้ว!");  // Popup alert message
+            {% endif %}
+    
+            function updateAnnotatedClass(annotatedId, newClass, annotatedType = null) {
+                fetch(`/update_annotated_class/${annotatedId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        'annotated_class': newClass,
+                        'annotated_type': annotatedType
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log("Annotated class and type updated successfully:", data);
+                    } else {
+                        alert("เกิดข้อผิดพลาดในการอัปเดตประเภทข้อความ: " + data.error);
+                        console.error("Error updating annotated class and type:", data.error);
+                    }
+                })
+                .catch(error => {
+                    alert("เกิดข้อผิดพลาดในการเชื่อมต่อ: " + error.message);
+                    console.error("Fetch error:", error);
+                });
+            }
+    
+            // Event listener for the "บูลลี่" button
             bullyBtn.addEventListener("click", function() {
-                annotatedClass = 1;
-                annotatedType = 'บูลลี่ทางเพศสภาพ';
+                const annotatedId = {{ current_text.annotated_id }};
+                updateAnnotatedClass(annotatedId, 1);
                 bullyBtn.classList.add("active");
                 notBullyBtn.classList.remove("active");
-                console.log("Annotated Class set to:", annotatedClass); // Debug log
+                console.log("บูลลี่ button clicked. Enabling bully type buttons.");
+    
+                // Enable all bully type buttons and remove disabled class
+                bullyTypeButtons.forEach(button => {
+                    button.classList.remove("disabled");
+                    button.disabled = false;
+                    console.log(`Enabled button: ${button.id}`);
+                });
             });
-        
-            // Set annotatedClass to 0 when "ไม่บูลลี่" button is clicked
+    
+            // Event listener for the "ไม่บูลลี่" button
             notBullyBtn.addEventListener("click", function() {
-                annotatedClass = 0;
-                annotatedType = 'ไม่บูลลี่';
+                const annotatedId = {{ current_text.annotated_id }};
+                updateAnnotatedClass(annotatedId, 0, "ไม่บูลลี่");
                 notBullyBtn.classList.add("active");
                 bullyBtn.classList.remove("active");
-                console.log("Annotated Class set to:", annotatedClass); // Debug log
+                console.log("ไม่บูลลี่ button clicked. Disabling bully type buttons.");
+    
+                // Disable all bully type buttons and add disabled class
+                bullyTypeButtons.forEach(button => {
+                    button.classList.add("disabled");
+                    button.disabled = true;
+                    console.log(`Disabled button: ${button.id}`);
+                });
             });
-        
-            // Confirm selection and send to server
-            document.getElementById('confirmBtn').addEventListener('click', function(event) {
-                event.preventDefault();
-        
-                if (annotatedClass !== null) { // Ensure a selection was made
-                    fetch(`/update_annotation/${annotated_id}/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': '{{ csrf_token }}', // Django CSRF token
-                        },
-                        body: JSON.stringify({ annotated_class: annotatedClass, annotated_type: annotatedType })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            console.log("Annotation updated successfully.");
-                            // Proceed to the next text or any additional actions
-                        } else {
-                            alert('Failed to update annotation.');
-                        }
-                    })
-                    .catch(error => console.error('Error updating annotation:', error));
-                } else {
-                    alert('กรุณาเลือกประเภทบูลลี่หรือไม่บูลลี่'); // Prompt if no selection
-                }
+    
+            // Event listener for individual bully-type button clicks
+            bullyTypeButtons.forEach(button => {
+                button.addEventListener("click", function() {
+                    const annotatedId = {{ current_text.annotated_id }};
+                    const annotatedType = this.textContent;  // Get the text of the clicked button
+                    updateAnnotatedClass(annotatedId, 1, annotatedType);
+                    bullyTypeButtons.forEach(btn => btn.classList.remove("active"));
+                    this.classList.add("active");
+                    console.log(`Selected bully type: ${annotatedType}`);
+                });
             });
         });
     </script>

@@ -213,7 +213,7 @@
           const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked'); // Get all checked user checkboxes
 
           checkboxes.forEach(checkbox => {
-              selectedUserIds.push(checkbox.value); // Push the user ID to the array
+              selectedUserIds.push(checkbox.value); // Add each user ID to the array
           });
 
           const taskId = document.getElementById('task-select').value; // Get the selected task ID
@@ -221,9 +221,10 @@
           // Redirect to admin_assign_data with user_ids and task_id as query parameters
           if (selectedUserIds.length > 0 && taskId) {
               const userIds = selectedUserIds.join(',');
-              window.location.href = '{% url "admin_assign_data" 0 %}'.replace('0', taskId) + '?user_ids=' + userIds;
+              const url = '{% url "admin_assign_data" 0 %}'.replace('0', taskId) + '?user_ids=' + encodeURIComponent(userIds);
+              window.location.href = url;
           } else {
-              alert('กรุณาเลือกผู้ใช้และงานก่อน'); // Alert if no user is selected
+              alert('กรุณาเลือกผู้ใช้และงานก่อน'); // Alert if no user or task is selected
           }
       }
   </script>

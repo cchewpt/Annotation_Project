@@ -14258,6 +14258,11 @@ align-self: center;
   cursor: not-allowed;
 }
 
+.bully-type.active {
+  background-color: #34303b;
+
+}
+
 .bully-type:hover:not(.disabled) {
   background-color: #6d4f9d;
 }
