@@ -14253,6 +14253,10 @@ align-self: center;
   transition: all 0.2s ease;
 }
 
+.text-red {
+  color: red;
+}
+
 .bully-type.disabled {
   background-color: #34303b;
   cursor: not-allowed;

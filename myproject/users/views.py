@@ -86,6 +86,55 @@ def edit_profile(request):
             })
     else:
         return redirect('login')  # Redirect to login page if not authenticated
+def user_annotated_stat(request):
+    if request.user.is_authenticated:
+        user = request.user
+        annotated_texts = AnnotatedText.objects.filter(user=user)
+        
+        # Count the texts where the current user has proposed
+        proposed_text_count = ProposedText.objects.filter(user=user).count()
+
+        # Count texts that the user supervised
+        supervised_text_count = AnnotatedText.objects.filter(user=user).count()
+
+        # Count tasks assigned to the current user
+        user_task_count = UserTask.objects.filter(user=user).count()
+
+        # Fetch tasks assigned to the current user from UserTask
+        user_tasks = UserTask.objects.filter(user=user).select_related('task')
+
+        task_status_list = []
+        for user_task in user_tasks:
+            # Check if any annotated_texts for this task and user are not marked as 'รอกำกับ'
+            is_completed = AnnotatedText.objects.filter(
+                task_id=user_task.task,
+                user=user,
+            ).exclude(annotated_type='รอกำกับ').exists()
+
+            task_status_list.append({
+                'task_name': user_task.task.task_name,
+                'latest_assign_date': user_task.latest_assign_date,
+                'assign_date': user_task.assigned_date,
+                'status': 'เสร็จสิ้น' if is_completed else 'ยังไม่เสร็จ'
+            })
+
+        return render(request, 'accounts/user_annotated_stat.html', {
+            'username': user.username,
+            'user_id': user.user_id,
+            'email': user.email,
+            'tel': user.tel,
+            'user_lname': user.user_lname,
+            'user_fname': user.user_fname,
+            'proposed_text_count': proposed_text_count,
+            'supervised_text_count': supervised_text_count,
+            'user_task_count': user_task_count,  # Pass the count of user's tasks
+            'user_tasks': user_tasks,
+            'annotated_texts': annotated_texts,
+            'task_status_list': task_status_list
+        })
+    else:
+        return redirect('login')
+    
 
 def user_profile(request):
     if request.user.is_authenticated:
@@ -94,8 +143,8 @@ def user_profile(request):
         # Count the texts where the current user has proposed
         proposed_text_count = ProposedText.objects.filter(user=user).count()
 
-        # Count texts that the user supervised (assuming some field tracks this, like word_status)
-        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
+        # Count the number of annotated texts supervised by the current user
+        supervised_text_count = AnnotatedText.objects.filter(user=user).count()
 
         return render(request, 'accounts/user_profile.html', {
             'username': user.username,
@@ -105,7 +154,7 @@ def user_profile(request):
             'user_lname': user.user_lname,
             'user_fname': user.user_fname,
             'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
-            'supervised_text_count': supervised_text_count  # Pass the count of supervised texts
+            'supervised_text_count': supervised_text_count  # Pass the count of supervised annotated texts
         })
     else:
         return redirect('login')
@@ -718,12 +767,30 @@ def annotatepage(request):
 def userannotatehist(request):
     if request.user.is_authenticated:
         user = request.user
-
+        annotated_texts = AnnotatedText.objects.filter(user=user)
         # Count the texts where the current user has proposed
         proposed_text_count = ProposedText.objects.filter(user=user).count()
 
         # Count texts that the user supervised (assuming some field tracks this, like word_status)
         supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
+
+        # Fetch tasks assigned to the current user from UserTask
+        user_tasks = UserTask.objects.filter(user=user).select_related('task')  # Use select_related to optimize queries
+
+        task_status_list = []
+        for user_task in user_tasks:
+            # Check if any annotated_texts for this task and user are not marked as 'รอกำกับ'
+            is_completed = AnnotatedText.objects.filter(
+                task_id=user_task.task,
+                user=user,
+            ).exclude(annotated_type='รอกำกับ').exists()
+
+            task_status_list.append({
+                'task_name': user_task.task.task_name,
+                'latest_assign_date': user_task.latest_assign_date,
+                'assign_date': user_task.assigned_date,
+                'status': 'เสร็จสิ้น' if is_completed else 'ยังไม่เสร็จ'
+            })
 
         return render(request, 'accounts/userannotatehist.html', {
             'username': user.username,
@@ -733,7 +800,10 @@ def userannotatehist(request):
             'user_lname': user.user_lname,
             'user_fname': user.user_fname,
             'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
-            'supervised_text_count': supervised_text_count  # Pass the count of supervised texts
+            'supervised_text_count': supervised_text_count,  # Pass the count of supervised texts
+            'user_tasks': user_tasks,  # Pass the user's tasks to the template
+            'annotated_texts': annotated_texts,
+            'task_status_list': task_status_list
         })
     else:
         return redirect('login')
@@ -778,17 +848,30 @@ def annotateselect(request):
         # Count the texts where the current user has proposed
         proposed_text_count = ProposedText.objects.filter(user=user).count()
 
-        # Count texts that the user supervised (assuming some field tracks this, like word_status)
+        # Count texts that the user supervised
         supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()
 
         # Fetch tasks assigned to the current user
-        user_tasks = UserTask.objects.filter(user=user)  # Assuming `user` is a ForeignKey in UserTask
+        user_tasks = UserTask.objects.filter(user=user)
+
+        # Filter tasks to exclude those where all annotated entries are completed
+        filtered_user_tasks = []
+        for user_task in user_tasks:
+            # Check if there is any `AnnotatedText` with `annotated_type='รอกำกับ'` for this user and task
+            has_pending_annotations = AnnotatedText.objects.filter(
+                task_id=user_task.task,
+                user=user,
+                annotated_type='รอกำกับ'
+            ).exists()
+
+            if has_pending_annotations:
+                filtered_user_tasks.append(user_task)
 
         # Set a default current index
-        current_index = 0  # Adjust if needed, 0 for the first item
+        current_index = 0  # Adjust if needed
 
         # Check if all annotations are completed
-        all_annotations_completed = request.session.pop('all_annotations_completed', False)  # Get and remove the flag
+        all_annotations_completed = request.session.pop('all_annotations_completed', False)
 
         return render(request, 'accounts/annotateselect.html', {
             'username': user.username,
@@ -797,11 +880,11 @@ def annotateselect(request):
             'tel': user.tel,
             'user_lname': user.user_lname,
             'user_fname': user.user_fname,
-            'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
-            'supervised_text_count': supervised_text_count,  # Pass the count of supervised texts
-            'user_tasks': user_tasks,  # Pass the user's tasks to the template
-            'current_index': current_index,  # Pass the current index to the template
-            'all_annotations_completed': all_annotations_completed  # Pass the completion flag
+            'proposed_text_count': proposed_text_count,
+            'supervised_text_count': supervised_text_count,
+            'user_tasks': filtered_user_tasks,  # Pass only filtered tasks to the template
+            'current_index': current_index,
+            'all_annotations_completed': all_annotations_completed
         })
     else:
         return redirect('login')

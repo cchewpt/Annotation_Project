@@ -35,5 +35,6 @@ urlpatterns = [
     path('update_annotated_class/<int:annotated_id>/', views.update_annotated_class, name='update_annotated_class'),
     path('update_annotation/<int:annotated_id>/', views.update_annotation, name='update_annotation'),
     path('confirm_annotation/<int:task_id>/<int:current_index>/', views.confirm_annotation, name='confirm_annotation'),
-    path('login/accounts/admin_kappa/', views.admin_kappa, name='admin_kappa')
+    path('login/accounts/admin_kappa/', views.admin_kappa, name='admin_kappa'),
+    path('login/accounts/user_annotated_stat/', views.user_annotated_stat, name='user_annotated_stat')
 ]
