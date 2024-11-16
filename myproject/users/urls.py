@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from .views import login_view
 from .views import texttopost
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -9,6 +10,7 @@ urlpatterns = [
     path('login/accounts/mainlogin/', views.mainlogin, name='mainlogin'),
     path('annotatepage/', views.annotatepage, name='annotatepage'),
     path('forgotpass/', views.forgotpass, name='forgotpass'),
+    path('reset-password-confirm/<uidb64>/<token>/', views.forgotpass2, name='forgotpass2'),
     path('login/accounts/texttopost/', texttopost, name='texttopost'),
     path('login/accounts/texttopostFile/', views.texttopostFile, name='texttopostFile'),
     path('login/accounts/txtverify/', views.txtverify, name='txtverify'),

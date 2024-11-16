@@ -81,18 +81,28 @@
             <!-- File Input Section -->
             <div id="file-input-section" class="form-container">
               <form id="file-form2" enctype="multipart/form-data" method="post" action="{% url 'texttopostFile' %}">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <label for="file-upload" class="form-label text-white">โปรดอัปโหลดไฟล์ (รองรับเฉพาะ .csv หรือ .xml)</label>
-                    <input type="file" class="form-control" id="file-upload2" name="file" accept=".csv, .xml" required />
-                </div>
-                {% if error_message %}
-                    <div class="alert alert-danger" role="alert">
-                        {{ error_message }}
-                    </div>
-                {% endif %}
-                <button id="submit-file-btn" type="submit" class="btn btn-success">ส่งไฟล์</button>
+                  {% csrf_token %}
+                  <div class="mb-3">
+                      <label for="file-upload" class="form-label text-white">โปรดอัปโหลดไฟล์ (รองรับเฉพาะ .csv หรือ .xml)</label>
+                      <input type="file" class="form-control" id="file-upload2" name="file" accept=".csv, .xml" required />
+                  </div>
+          
+                  <!-- Error message for invalid input -->
+                  {% if error_message %}
+                      <div class="alert alert-danger" role="alert">
+                          {{ error_message }}
+                      </div>
+                  {% endif %}
+          
+                  <button
+                      id="submit-file-btn"
+                      type="submit"
+                      class="btn btn-success"
+                      onclick="return confirmFileUpload();">
+                      ส่งไฟล์
+                  </button>
               </form>
+            </div>
             
               
 
@@ -138,6 +148,15 @@
     </section>
     <!--texttopostfile-->
     <script>
+      function confirmFileUpload() {
+        const fileInput = document.getElementById('file-upload2');
+        if (fileInput.files.length === 0) {
+            alert('กรุณาเลือกไฟล์ก่อนส่ง!');
+            return false; // Prevent form submission
+        }
+        alert('ไฟล์ของคุณถูกส่งเรียบร้อยแล้ว!');
+        return true; // Allow form submission
+      } 
       document.addEventListener("DOMContentLoaded", function () {
         // Get references to DOM elements
         const fileForm = document.getElementById("file-form2");

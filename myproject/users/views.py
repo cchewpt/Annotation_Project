@@ -2,12 +2,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate,login as auth_login
 from django.db import connection
 from django.contrib import messages
+from django.template.loader import render_to_string
 from io import TextIOWrapper
+from django.contrib.auth import get_user_model
 from .models import user_map, Users, ProposedText, ProposedFile,Admins,Task,AnnotatedText,UserTask
 import bcrypt  # Import bcrypt for password hashing
 import logging
 from django.core.paginator import Paginator
 import json
+import base64
+from django.contrib.auth.tokens import default_token_generator
 import uuid
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.decorators import login_required
@@ -35,10 +39,10 @@ from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.conf import settings
-from django.contrib.auth.tokens import default_token_generator
 from django.utils.crypto import get_random_string
 from django.http import JsonResponse
 from django.http import Http404
+from django.core.mail import send_mail
 logger = logging.getLogger(__name__)
 
 
@@ -687,6 +691,14 @@ def admin_add_datasets(request):
 
                 # Save each annotated text entry
                 for idx, annotated_text in enumerate(annotated_texts_list):
+                    # Check if the word already exists in ProposedText
+                    matching_proposed_text = ProposedText.objects.filter(proposed_text=annotated_text).first()
+
+                    if matching_proposed_text:
+                        text_id = matching_proposed_text.text_id  # Use the existing text_id
+                    else:
+                        text_id = None  # Set to None if no match is found
+
                     annotated_id = generate_unique_annotated_id()  # Ensure unique annotated_id
                     AnnotatedText.objects.create(
                         annotated_id=annotated_id,
@@ -694,7 +706,7 @@ def admin_add_datasets(request):
                         task_id=task,
                         annotated_class=0,
                         annotated_type="รอกำกับ",
-                        text_id=None,
+                        text_id_id=text_id,  # Use the existing text_id or None
                     )
 
                 return redirect('admin_mng_datasets1')
@@ -963,39 +975,79 @@ def confirm_annotation(request, task_id, current_index):
 
 
 def forgotpass(request):
-    if request.method == "POST":
+    if request.method == 'POST':
         email = request.POST.get('email')
-        logger.debug(f'Received password reset request for email: {email}')  # Debug line
         
-        associated_user = User.objects.filter(email=email).first()
+        # Check if the user exists
+        user = Users.objects.filter(email=email).first()
+        if not user:
+            messages.error(request, 'No user found with this email address.')
+            return redirect('forgotpass')
         
-        if associated_user:
-            logger.debug(f'User found: {associated_user.username}')  # Debug line
-            subject = "Password Reset Request"
-            email_template = 'accounts/password_reset_email.html'
-            context = {
-                "email": associated_user.email,
-                "domain": request.META['HTTP_HOST'],  # Domain from the current request
-                "site_name": 'Your Website',
-                "uid": urlsafe_base64_encode(force_bytes(associated_user.pk)),
-                "user": associated_user,
-                "token": default_token_generator.make_token(associated_user),
-                "protocol": 'https' if request.is_secure() else 'http',
-            }
-            try:
-                email_body = render_to_string(email_template, context)
-                logger.debug(f'Email body rendered: {email_body}')  # Debug line
-                send_mail(subject, email_body, settings.EMAIL_HOST_USER, [associated_user.email])
-                messages.success(request, 'A password reset link has been sent to your email.')
-                logger.debug('Email sent successfully')  # Debug line
-            except Exception as e:
-                logger.error(f'Error sending email: {str(e)}')  # Log the error
-                messages.error(request, f'Error sending email: {str(e)}')  # Feedback to user
-        else:
-            messages.error(request, 'No user is associated with this email address.')  # Feedback if user not found
-            logger.debug('No user found for the provided email address')  # Debug line
+        # Generate token (UUID in this example)
+        token = str(uuid.uuid4())
+        
+        # Encode user_id for the link
+        uidb64 = base64.urlsafe_b64encode(str(user.user_id).encode()).decode()
+
+        # Generate the URL for the password reset confirmation
+        try:
+            reset_url = reverse('forgotpass2', kwargs={'uidb64': uidb64, 'token': token})
+            reset_link = f'{request.scheme}://{request.get_host()}{reset_url}'  # Full URL
+        except Exception as e:
+            print(f"Error generating reset URL: {e}")
+            messages.error(request, 'Error generating reset URL.')
+            return redirect('forgotpass')
+
+        # Send the reset email with the link
+        subject = "คำขอเปลี่ยนรหัสผ่าน"
+        message = f'กรุณากดที่ลิ้งค์เพื่อเปลี่ยนรหัสผ่านของคุณ: {reset_link}'
+        from_email = settings.DEFAULT_FROM_EMAIL
+        send_mail(subject, message, from_email, [email])
+
+        messages.success(request, 'Password reset email has been sent.')
+        return redirect('forgotpass')
 
     return render(request, 'forgotpass.html')
+
+def forgotpass2(request, uidb64, token):
+    try:
+        # Decode the uidb64 to get the user_id
+        user_id = base64.urlsafe_b64decode(uidb64).decode()
+
+        # Fetch the user by user_id
+        user = Users.objects.filter(user_id=user_id).first()
+
+        if not user:
+            messages.error(request, 'ผู้ใช้ไม่พบ')  # User not found
+            return redirect('forgotpass')
+
+        if request.method == 'POST':
+            # Get the new password from the form
+            new_password = request.POST.get('new_password')
+
+            if new_password:
+                # Hash the new password using bcrypt
+                hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+                # Update the user's password in the database
+                user.set_password(new_password)  # Use the hashed password to set it
+
+                # Save the user object with the updated password
+                user.save()
+
+                # Notify the user of success
+                messages.success(request, 'รหัสผ่านของคุณได้ถูกเปลี่ยนเรียบร้อยแล้ว')  # Password successfully changed
+                return redirect('login')  # Redirect to login or another page
+
+        # Render the password reset form with the necessary data
+        return render(request, 'forgotpass2.html', {'user': user, 'uidb64': uidb64, 'token': token})
+
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error during password reset process: {e}")
+        messages.error(request, 'มีข้อผิดพลาดในการรีเซตรหัสผ่าน')  # Error during password reset
+        return redirect('forgotpass')
 
 def texttopost(request):
 
@@ -1048,12 +1100,12 @@ def texttopostFile(request):
         if request.method == 'POST' and request.FILES.get('file'):
             upload_file = request.FILES['file']
             user = request.user._wrapped if hasattr(request.user, '_wrapped') else request.user
-            
+
             file_name = upload_file.name
             file_type = upload_file.content_type.split('/')[-1]  
             file_size = float(upload_file.size)  
             upload_id = generate_upload_id()
-            
+
             try:
                 # Create ProposedFile instance first
                 proposed_file = ProposedFile.objects.create(
@@ -1083,7 +1135,7 @@ def texttopostFile(request):
                             print(f"Skipping row due to insufficient columns: {row}")
                             continue
 
-                        word = row[0].strip()  # Ensure word is stripped of whitespace
+                        word = row[0].strip()
                         word_class_value = row[1].strip()
                         word_class_type = row[2].strip()
 
@@ -1102,35 +1154,29 @@ def texttopostFile(request):
                             max_count += 1
                             text_id = f"201{max_count:07d}"
 
-                            # Check for uniqueness before attempting insertion
                             if text_id not in existing_ids:
-                                print(f"Generated unique text_id: {text_id}")
-                                break  # Exit while loop if unique
-                            else:
-                                print(f"Generated text_id {text_id} already exists. Regenerating...")
+                                break
 
                         try:
-                            with transaction.atomic():  # Ensure atomicity
-                                # Check again for existing text_id before creating
-                                if ProposedText.objects.filter(text_id=text_id).exists():
-                                    print(f"Duplicate entry for text_id {text_id} found before insert - skipping this row.")
-                                    continue  # Skip if it exists
+                            with transaction.atomic():
+                                word_status = "ข้อความถูกกำกับโดยผู้ใช้ภายนอก" if word_class_type else "รออนุมัติ"
 
-                                # Create ProposedText entry
+                                if ProposedText.objects.filter(text_id=text_id).exists():
+                                    continue
+
                                 ProposedText.objects.create(
                                     user=user,
                                     proposed_text=word,
                                     word_class=word_class,
-                                    word_status="รออนุมัติ",
+                                    word_status=word_status,
                                     word_class_type=word_class_type,
                                     text_id=text_id,
-                                    upload_id=proposed_file  # Make sure you're passing the instance here
+                                    upload_id=proposed_file
                                 )
-                                print(f"Successfully created ProposedText with text_id: {text_id}")
 
                         except IntegrityError as e:
                             print(f"Error inserting text_id {text_id}: {e}")
-                            continue  # Skip this entry if a duplicate text_id is found
+                            continue
 
                 elif upload_file.name.endswith('.xml'):
                     xml_data = upload_file.read()
@@ -1141,60 +1187,52 @@ def texttopostFile(request):
                         word_class_elem = row.find('เป็นคำบูลลี่หรือไม่_ไม่เป็น_0_เป็น_1')
                         word_class_type_elem = row.find('ประเภทของคำบูลลี่')
 
-                        # Safely get the text or use a default value if None
                         word = word_elem.text.strip() if word_elem is not None and word_elem.text else ''
                         word_class_value = word_class_elem.text.strip() if word_class_elem is not None and word_class_elem.text else ''
                         word_class_type = word_class_type_elem.text.strip() if word_class_type_elem is not None and word_class_type_elem.text else ''
 
-                        if not word_class_value:  
-                            print(f"Invalid word_class value: empty - skipping this row: {row}")
+                        if not word_class_value:
                             continue
 
                         try:
-                            word_class = int(word_class_value)  # Convert to integer
+                            word_class = int(word_class_value)
                         except ValueError:
-                            print(f"Invalid word_class value: {word_class_value} - skipping this row: {row}")
                             continue
 
-                        # Unique ID generation loop
                         while True:
                             max_count += 1
                             text_id = f"201{max_count:07d}"
 
-                            # Check for uniqueness before attempting insertion
                             if text_id not in existing_ids:
-                                print(f"Generated unique text_id: {text_id}")
-                                break  # Exit while loop if unique
-                            else:
-                                print(f"Generated text_id {text_id} already exists. Regenerating...")
+                                break
 
                         try:
-                            with transaction.atomic():  # Ensure atomicity
-                                # Check again for existing text_id before creating
-                                if ProposedText.objects.filter(text_id=text_id).exists():
-                                    print(f"Duplicate entry for text_id {text_id} found before insert - skipping this row.")
-                                    continue  # Skip if it exists
+                            with transaction.atomic():
+                                word_status = "ข้อความถูกกำกับโดยผู้ใช้ภายนอก" if word_class_type else "รออนุมัติ"
 
-                                # Create ProposedText entry
+                                if ProposedText.objects.filter(text_id=text_id).exists():
+                                    continue
+
                                 ProposedText.objects.create(
                                     user=user,
                                     proposed_text=word,
                                     word_class=word_class,
-                                    word_status="รออนุมัติ",
+                                    word_status=word_status,
                                     word_class_type=word_class_type,
                                     text_id=text_id,
-                                    upload_id=proposed_file  # Make sure you're passing the instance here
+                                    upload_id=proposed_file
                                 )
-                                print(f"Successfully created ProposedText with text_id: {text_id}")
 
                         except IntegrityError as e:
                             print(f"Error inserting text_id {text_id}: {e}")
-                            continue  # Skip this entry if a duplicate text_id is found
+                            continue
 
+                messages.success(request, "File uploaded and processed successfully!")
                 return redirect("texttopostFile")
-                
+
             except Exception as e:
                 print(f"Error while creating ProposedText or ProposedFile: {e}")
+                messages.error(request, "An error occurred during file processing.")
 
         return render(request, 'accounts/texttopostFile.html', {
             'username': request.user.username,
@@ -1385,6 +1423,36 @@ def generate_task_id():
         if not Task.objects.filter(task_id=task_id).exists():
             return task_id  # Return the unique task_id
 
+def send_forget_password_mail(request, email, user, token):
+    try:
+        # Encode the user_id (uidb64) instead of id
+        uidb64 = base64.urlsafe_b64encode(str(user.user_id).encode()).decode()
+
+        subject = "Password Reset Request"
+        email_template = 'accounts/password_reset_email.html'
+
+        context = {
+            'email': email,
+            'token': token,
+            'uidb64': uidb64,  # Include the uidb64 value
+            'protocol': 'https' if request.is_secure() else 'http',
+            'domain': request.META['HTTP_HOST'],
+        }
+
+        # Render the email content
+        email_body = render_to_string(email_template, context)
+
+        # Send the email
+        send_mail(
+            subject,
+            email_body,
+            settings.DEFAULT_FROM_EMAIL,  # Replace with your actual sender email
+            [email],
+        )
+
+        print(f"Email sent to {email}")
+    except Exception as e:
+        print(f"Error sending email: {str(e)}")
 
 def generate_user_task_id():
     while True:
