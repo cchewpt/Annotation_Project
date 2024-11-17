@@ -8,11 +8,13 @@ from django.contrib.auth import get_user_model
 from .models import user_map, Users, ProposedText, ProposedFile,Admins,Task,AnnotatedText,UserTask
 import bcrypt  # Import bcrypt for password hashing
 import logging
+from statsmodels.stats.inter_rater import fleiss_kappa
 from django.core.paginator import Paginator
 import json
 import base64
 from django.contrib.auth.tokens import default_token_generator
 import uuid
+import numpy as np
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -42,14 +44,19 @@ from django.conf import settings
 from django.utils.crypto import get_random_string
 from django.http import JsonResponse
 from django.http import Http404
-from django.core.mail import send_mail
+import locale
+import math
+from babel.dates import format_date
+from django.utils.timezone import is_aware,localtime
 logger = logging.getLogger(__name__)
 
+locale.setlocale(locale.LC_TIME, "th_TH.UTF-8")
 
 def index(request):
     return render(request, 'index.html')  # แสดงหน้า home.html
 
 def edit_profile(request):
+
     if request.user.is_authenticated:
             if request.method == 'POST':
                 # Get the current authenticated user
@@ -418,23 +425,37 @@ def admin_assign_data(request, task_id):
                     # Retrieve the texts associated with the task
                     task_texts = AnnotatedText.objects.filter(task_id=task_id).values_list('annotated_text', flat=True)
 
+                    # Set the locale to Thai for date formatting (for display purposes)
+                    locale.setlocale(locale.LC_TIME, 'th_TH.UTF-8')  # This sets the locale to Thai (TH)
+
                     # Iterate over each user and each text in the task to create entries
                     for user_id in user_ids_list:
-                        user = Users.objects.get(user_id=user_id)  # Retrieve the user object
                         try:
-                            user = Users.objects.get(pk=user_id)  # Get the user object
-                            # Create UserTask instance
+                            user = Users.objects.get(user_id=user_id)  # Retrieve the user object
+                            
+                            # Get the current date and store it in the correct format for MySQL
+                            current_datetime = timezone.now()  # Get current date and time
+                            assigned_date = current_datetime.date()  # Store as 'YYYY-MM-DD'
+                            latest_assign_date = current_datetime.date()  # Store as 'YYYY-MM-DD'
+                            
+                            # Format the dates to Thai language for display (optional)
+                            assigned_date_thai = current_datetime.strftime('%d %B %Y')  # Format as 'day month year'
+                            latest_assign_date_thai = current_datetime.strftime('%d %B %Y')  # Format as 'day month year'
+                            
+                            # Create UserTask instance with MySQL-compatible dates
                             user_task = UserTask.objects.create(
                                 user=user,
                                 task=task,
-                                assigned_date=timezone.now(),
-                                latest_assign_date=timezone.now(),
+                                assigned_date=assigned_date,  # Store the date in 'YYYY-MM-DD' format
+                                latest_assign_date=latest_assign_date,  # Store the date in 'YYYY-MM-DD' format
                                 user_task_id=generate_user_task_id()  # Call your ID generation function
                             )
+
                         except Users.DoesNotExist:
                             print(f'User with id {user_id} does not exist.')
+                        
+                        # For each task text, create AnnotatedText entries
                         for text in task_texts:
-                            # Generate a unique annotated_id and create an entry for each text-user combination
                             annotated_id = generate_unique_annotated_id()
                             AnnotatedText.objects.create(
                                 annotated_id=annotated_id,
@@ -457,107 +478,73 @@ def admin_assign_data(request, task_id):
 
 def assign_user_tasks(request):
     if request.method == 'GET':
-            user_ids = request.GET.get('user_ids', '').split(',')  # Get user IDs from query params
-            task_id = request.GET.get('task_id')
+        user_ids = request.GET.get('user_ids', '').split(',')  # Get user IDs from query params
+        task_id = request.GET.get('task_id')
 
-            if task_id and user_ids:
+        if task_id and user_ids:
+            try:
+                task = Task.objects.get(pk=task_id)  # Get the task object
+            except Task.DoesNotExist:
+                return render(request, 'error.html', {'message': 'Task does not exist'})
+
+            # Set the locale to Thai for date formatting
+            locale.setlocale(locale.LC_TIME, 'th_TH.UTF-8')  # This sets the locale to Thai (TH)
+
+            for user_id in user_ids:
                 try:
-                    task = Task.objects.get(pk=task_id)  # Get the task object
-                except Task.DoesNotExist:
-                    return render(request, 'error.html', {'message': 'Task does not exist'})
+                    user = Users.objects.get(pk=user_id)  # Get the user object
 
-                for user_id in user_ids:
-                    try:
-                        user = Users.objects.get(pk=user_id)  # Get the user object
-                        # Create UserTask instance
-                        user_task = UserTask.objects.create(
-                            user=user,
-                            task=task,
-                            assigned_date=timezone.now(),
-                            latest_assign_date=timezone.now(),
-                            user_task_id=generate_user_task_id()  # Call your ID generation function
-                        )
-                    except Users.DoesNotExist:
-                        print(f'User with id {user_id} does not exist.')
+                    # Format the dates to Thai language
+                    assigned_date_thai = timezone.now().strftime('%d %B %Y')  # Format as 'day month year'
+                    latest_assign_date_thai = timezone.now().strftime('%d %B %Y')  # Format as 'day month year'
 
-                return redirect('success_page')  # Redirect after processing
-            else:
-                return render(request, 'error.html', {'message': 'No users or task selected'})
+                    # Create UserTask instance with formatted dates
+                    user_task = UserTask.objects.create(
+                        user=user,
+                        task=task,
+                        assigned_date=assigned_date_thai,  # Set the formatted assigned date
+                        latest_assign_date=latest_assign_date_thai,  # Set the formatted latest assigned date
+                        user_task_id=generate_user_task_id()  # Call your ID generation function
+                    )
+                except Users.DoesNotExist:
+                    print(f'User with id {user_id} does not exist.')
+
+            return redirect('success_page')  # Redirect after processing
+        else:
+            return render(request, 'error.html', {'message': 'No users or task selected'})
+    
     return redirect('login')
 
 def calculate_fleiss_kappa(annotated_texts):
-    # Use a set to track unique annotated texts that have a user_id
-    unique_annotated_texts = {}
-    
+    # Create a dictionary to count the raters for each annotated text and class
+    text_class_counts = {}
+
     for text in annotated_texts:
-        if text.user_id is not None:
-            unique_annotated_texts[text.annotated_text] = text  # Keep the reference to the text
+        if text.annotated_text not in text_class_counts:
+            text_class_counts[text.annotated_text] = [0, 0]  # [count_class_0, count_class_1]
+        
+        # Increment the appropriate class count (0 or 1)
+        text_class_counts[text.annotated_text][text.annotated_class] += 1
 
-    # Convert back to a list from the dictionary values
-    filtered_annotated_texts = list(unique_annotated_texts.values())
-    
-    print(f"DEBUG: Filtered annotated texts count (with user_id, unique annotated_text): {len(filtered_annotated_texts)}")  # Debug statement
-
-    # Create a count matrix
-    class_counts = {}
-    
-    for text in filtered_annotated_texts:
-        # Initialize class count if not already present
-        if text.annotated_class not in class_counts:
-            class_counts[text.annotated_class] = {}
-        if text.annotated_text not in class_counts[text.annotated_class]:
-            class_counts[text.annotated_class][text.annotated_text] = 0
-        class_counts[text.annotated_class][text.annotated_text] += 1
-
-    print(f"DEBUG: Class counts: {class_counts}")  # Debug statement
-
-    # Count of unique annotated texts
-    N = len(unique_annotated_texts)  # Count of unique annotated texts
-    num_classes = len(class_counts)
-
-    print(f"DEBUG: Total number of unique annotations (N): {N}")  # Updated debug statement
-    print(f"DEBUG: Number of unique classes: {num_classes}")  # Debug statement
-
-    if N < 2:  # Not enough data to calculate kappa
-        print("DEBUG: Not enough annotated texts to calculate kappa.")
-        return 0.0
-
-    # Create a matrix where rows are annotated texts and columns are classes
-    rating_matrix = []
-    
-    for text in unique_annotated_texts.keys():
-        row = []
-        for class_id in range(num_classes):
-            count = class_counts.get(class_id, {}).get(text, 0)
-            row.append(count)
-            print(f"DEBUG: Annotated text '{text}', Class {class_id}: {count}")  # Debug statement
-        rating_matrix.append(row)
+    # Convert the dictionary to a list for Fleiss' kappa calculation
+    rating_matrix = list(text_class_counts.values())
 
     print(f"DEBUG: Rating matrix: {rating_matrix}")  # Debug statement
 
-    # Calculate P_o (observed agreement)
-    P_o = sum(sum(n_i * (n_i - 1) for n_i in row) for row in rating_matrix) / (N * (N - 1)) if N > 1 else 0
-    print(f"DEBUG: Observed agreement (P_o): {P_o}")  # Debug statement
+    # Calculate Fleiss' Kappa using statsmodels
+    try:
+        kappa = fleiss_kappa(np.array(rating_matrix))
 
-    # Calculate P_e (expected agreement)
-    total_per_class = [sum(row[i] for row in rating_matrix) for i in range(num_classes)]
-    print(f"DEBUG: Total counts per class: {total_per_class}")  # Debug statement
-    
-    if N == 0:
-        P_e = 0
-    else:
-        P_e = sum((n_i / N) ** 2 for n_i in total_per_class)
+        if np.isnan(kappa):
+            print("DEBUG: Fleiss' Kappa returned NaN, setting kappa score to 0.0.")
+            kappa = 0.0
 
-    print(f"DEBUG: Expected agreement (P_e): {P_e}")  # Debug statement
+    except Exception as e:
+        print(f"DEBUG: Error calculating Fleiss' Kappa: {e}")
+        kappa = 0.0
 
-    # Calculate Fleiss' Kappa
-    if (1 - P_e) != 0:
-        kappa = (P_o - P_e) / (1 - P_e)
-    else:
-        kappa = 1.0  # If expected agreement is zero, return 1 (perfect agreement)
-
-    # Ensure kappa is always a positive value
-    kappa = abs(kappa)  # Use absolute value to ensure positivity
+    # Ensure that kappa is always positive
+    kappa = abs(kappa)
 
     print(f"DEBUG: Fleiss' Kappa value: {kappa}")  # Debug statement
     return kappa
@@ -574,8 +561,15 @@ def admin_kappa(request):
         for task in tasks:
             # Retrieve annotated texts for each task
             annotated_texts = AnnotatedText.objects.filter(task_id=task, user__isnull=False)
-            kappa_score = calculate_fleiss_kappa(annotated_texts)  # Calculate kappa score for the task
-            
+
+            # Check if annotated_texts is empty
+            if annotated_texts.exists():
+                print(f"DEBUG: Found {annotated_texts.count()} annotated texts for task {task.task_id}")
+                kappa_score = calculate_fleiss_kappa(annotated_texts)  # Calculate kappa score for the task
+            else:
+                print(f"DEBUG: No annotated texts found for task {task.task_id}")
+                kappa_score = 0.0  # Default value when no annotated texts are found
+
             # Update the task's kappa score in the database
             task.kappa_score = kappa_score
             task.save()
@@ -655,6 +649,7 @@ def admin_add_datasets(request):
     print("User type:", type(request.user))  # Debugging
 
     if request.user.is_authenticated and isinstance(request.user, Admins):
+        admin = request.user
         if request.method == 'POST':
             # Extract form data
             task_name = request.POST.get('task_name')
@@ -721,6 +716,12 @@ def admin_add_datasets(request):
             word_status="อนุมัติ"
         )
         return render(request, 'accounts/admin_add_datasets.html', {
+            'username': admin.admin_username,
+            'user_id': admin.admin_id,
+            'email': admin.admin_email,
+            'tel': admin.admin_tel,
+            'user_lname': admin.admin_lname,
+            'user_fname': admin.admin_name,  # Pass tasks to the template
             'proposed_texts': filtered_proposed_texts  # Pass the proposed texts to the template
         })
 
@@ -780,27 +781,38 @@ def userannotatehist(request):
     if request.user.is_authenticated:
         user = request.user
         annotated_texts = AnnotatedText.objects.filter(user=user)
-        # Count the texts where the current user has proposed
         proposed_text_count = ProposedText.objects.filter(user=user).count()
-
-        # Count texts that the user supervised (assuming some field tracks this, like word_status)
-        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()  # Adjust the condition as needed
-
-        # Fetch tasks assigned to the current user from UserTask
-        user_tasks = UserTask.objects.filter(user=user).select_related('task')  # Use select_related to optimize queries
+        supervised_text_count = ProposedText.objects.filter(user=user, word_status='กำกับแล้ว').count()
+        user_tasks = UserTask.objects.filter(user=user).select_related('task')
 
         task_status_list = []
         for user_task in user_tasks:
-            # Check if any annotated_texts for this task and user are not marked as 'รอกำกับ'
             is_completed = AnnotatedText.objects.filter(
                 task_id=user_task.task,
                 user=user,
             ).exclude(annotated_type='รอกำกับ').exists()
 
+            # Handle assign_date
+            assigned_date = user_task.assigned_date
+            assign_date_thai = (
+                format_date(assigned_date, format='d MMMM yyyy', locale='th')
+                if isinstance(assigned_date, datetime.date)
+                else "ไม่ระบุ"
+            )
+
+            # Handle latest_assign_date
+            latest_assigned_date = user_task.latest_assign_date
+            latest_assign_date_thai = (
+                format_date(latest_assigned_date, format='d MMMM yyyy', locale='th')
+                if isinstance(latest_assigned_date, datetime.date)
+                else "ไม่ระบุ"
+            )
+
             task_status_list.append({
+                'task_id': user_task.task.task_id,  # Ensure task_id is added
                 'task_name': user_task.task.task_name,
-                'latest_assign_date': user_task.latest_assign_date,
-                'assign_date': user_task.assigned_date,
+                'latest_assign_date': latest_assign_date_thai,
+                'assign_date': assign_date_thai,
                 'status': 'เสร็จสิ้น' if is_completed else 'ยังไม่เสร็จ'
             })
 
@@ -811,47 +823,84 @@ def userannotatehist(request):
             'tel': user.tel,
             'user_lname': user.user_lname,
             'user_fname': user.user_fname,
-            'proposed_text_count': proposed_text_count,  # Pass the count of proposed texts
-            'supervised_text_count': supervised_text_count,  # Pass the count of supervised texts
-            'user_tasks': user_tasks,  # Pass the user's tasks to the template
+            'proposed_text_count': proposed_text_count,
+            'supervised_text_count': supervised_text_count,
+            'user_tasks': user_tasks,
             'annotated_texts': annotated_texts,
             'task_status_list': task_status_list
         })
     else:
         return redirect('login')
 
+
+def userannotatehist2(request, task_id):
+    if request.user.is_authenticated:
+        user = request.user
+
+        # Retrieve the task and annotations
+        user_task = get_object_or_404(UserTask, task_id=task_id, user=user)
+        task_annotations = AnnotatedText.objects.filter(task_id=user_task.task, user=user)
+
+        # Format dates to Thai
+        assigned_date_thai = (
+            format_date(user_task.assigned_date, format='d MMMM yyyy', locale='th')
+            if user_task.assigned_date
+            else "ไม่ระบุ"
+        )
+        latest_assign_date_thai = (
+            format_date(user_task.latest_assign_date, format='d MMMM yyyy', locale='th')
+            if user_task.latest_assign_date
+            else "ไม่ระบุ"
+        )
+
+        # Determine task completion status
+        is_completed = task_annotations.exclude(annotated_type='รอกำกับ').exists()
+        status = 'เสร็จสิ้น' if is_completed else 'ยังไม่เสร็จ'
+
+        return render(request, 'accounts/userannotatehist2.html', {
+            'task_name': user_task.task.task_name,
+            'status': status,
+            'latest_assign_date': latest_assign_date_thai,
+            'assign_date': assigned_date_thai,
+            'task_annotations': task_annotations,  # Pass the annotations to the template
+        })
+    else:
+        return redirect('login')
+
 def usersannotating(request, task_id, current_index):
     if request.user.is_authenticated:
+        user = request.user
         try:
-            task = Task.objects.get(pk=task_id)  # Get the task object
-            
-            # Fetch the annotated texts for this task and the logged-in user
-            annotated_texts = AnnotatedText.objects.filter(task_id=task, user=request.user)  # Filter by user
-            
-            # Ensure current_index is within the bounds of annotated_texts
-            current_index = int(current_index)  # Convert to int for proper indexing
-            if current_index < 0 or current_index >= len(annotated_texts):
-                current_index = 0  # Reset to 0 if out of bounds
-            
+            task = Task.objects.get(pk=task_id)
+            annotated_texts = AnnotatedText.objects.filter(task_id=task, user=request.user)
+            current_index = int(current_index)
+
+            if current_index < 0:
+                current_index = 0  # Prevent going to negative index
+            elif current_index >= len(annotated_texts):
+                current_index = len(annotated_texts) - 1
+
             current_text = annotated_texts[current_index] if annotated_texts else None
 
             proposed_text_count = ProposedText.objects.filter(user=request.user).count()
             supervised_text_count = ProposedText.objects.filter(user=request.user, word_status='กำกับแล้ว').count()
 
             return render(request, 'accounts/usersannotating.html', {
+                'username': user.username,
                 'task_id': task.task_id,
                 'task_name': task.task_name,
                 'assigned_users': UserTask.objects.filter(task=task),
                 'proposed_text_count': proposed_text_count,
                 'supervised_text_count': supervised_text_count,
                 'current_text': current_text,
-                'current_index': current_index + 1,  # Pass the current index + 1 to display as 1-based index
-                'annotated_texts': annotated_texts  # Pass all annotated texts if needed
+                'current_index': current_index,  # Do not add 1 here
+                'annotated_texts': annotated_texts
             })
         except Task.DoesNotExist:
             raise Http404("Task does not exist")
     else:
         return redirect('login')
+
 
 def annotateselect(request):
     if request.user.is_authenticated:

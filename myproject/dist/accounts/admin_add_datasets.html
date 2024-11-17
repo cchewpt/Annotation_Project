@@ -79,17 +79,17 @@
               <div class="d-inline-flex align-items-center">
                 <img
                   class="rounded-circle"
-                  src="../static/assets/profile-placeholder.png"
+                  src="{% static 'assets/profile-placeholder.png' %}"
                   alt="..."
                   style="width: 80px; height: 80px"
                 />
               </div>
               <div class="d-md-flex flex-column offset-1">
                 <span class="fw-medium text-white" style="color: black"
-                  >ชื่อผู้ใช้: sayan1989</span
+                  >ชื่อผู้ใช้: {{username}}</span
                 >
                 <span class="fw-medium text-white" style="color: black"
-                  >รหัสผู้ใช้: A01</span
+                  >รหัสผู้ใช้: {{user_id}}</span
                 >
               </div>
             </div>

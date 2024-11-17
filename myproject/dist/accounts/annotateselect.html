@@ -73,8 +73,8 @@
                         <div class="col-12 mb-4">
                             <div class="annotate-box d-flex justify-content-between align-items-center">
                                 <div>
-                                    <p class="fw-bold mb-1">{{ task.task.task_name }}</p> <!-- Assuming you have a task_name in the Task model -->
-                                    <p class="mb-1">ข้อความที่กำกับแล้ว {{ task.supervised_count }}/{{ task.total_count }}</p> <!-- Adjust as needed -->
+                                    <p class="fw-bold mb-1">ชื่อชุดข้อความ: {{ task.task.task_name }}</p> <!-- Assuming you have a task_name in the Task model -->
+                                    <p class="mb-1">ข้อความที่กำกับแล้ว {{ supervised_count }}/{{ total_count }}</p> <!-- Adjust as needed -->
                                 </div>
                                 <div class="d-flex align-items-center">
                                     <p class="mb-0 me-6">โดย Admin: {{ task.admin.admin_fname }}</p> <!-- Assuming there's an admin field in UserTask -->

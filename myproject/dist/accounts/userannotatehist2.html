@@ -133,43 +133,51 @@
                                     onmouseout="this.style.transform='scale(1)';" />
                             </div>
                             <div class="col-lg-9 mt-5">
-                                <h4>ชื่อบัญชีผู้ใช้: {{ username }}</h4>
-                                <h4>ชื่อผู้ใช้: {{ user_fname }} {{ user_lname }}</h4>
+                              <div class="task-details">
+                                <h4>ชื่อชุดข้อความ: {{ task_name }}</h4>
+                                <h4 class="{% if status == 'ยังไม่เสร็จ' %}not-approved{% else %}approved{% endif %}">สถานะ: {{ status }}</h4>
+                                <h4>แก้ไขล่าสุด: {{ latest_assign_date }}</h4>
+                                <h4>วันที่มอบหมาย: {{ assign_date }}</h4>
+                              </div>
                             </div>
                         </div>
 
                         <div class="content-history-section">
-                            <h3 class="history-title">ประวัติการกำกับข้อความของท่าน</h3>
-                            <div class="scroll-box">
-                                <table class="content-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ชุดข้อความ</th>
-                                            <th>สถานะ</th>
-                                            <th>แก้ไขล่าสุด</th>
-                                            <th>วันที่มอบหมาย</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                      {% for task_info in task_status_list %}
+                          <h3 class="history-title">ข้อความที่เกี่ยวข้อง</h3>
+                          <div class="scroll-box">
+                              <table class="content-table">
+                                  <thead>
                                       <tr>
-                                          <td>{{ task_info.task_name }}</td>
-                                          <td class="{% if task_info.status == 'ยังไม่เสร็จ' %}not-approved{% else %}approved{% endif %}">
-                                              {{ task_info.status }}
-                                          </td>
-                                          <td>{{ task_info.latest_assign_date }}</td>
-                                          <td>{{ task_info.assign_date }}</td>
+                                          <th>ข้อความ</th>
+                                          <th>เป็นคำบูลลี่</th>
+                                          <th>ประเภทคำบูลลี่</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {% for annotation in task_annotations %}
+                                      <tr>
+                                          <td>{{ annotation.annotated_text }}</td>
                                           <td>
-                                            <a href="{% url 'userannotatehist2' task_info.task_id %}">
-                                                <button class="check-btn">ตรวจสอบ</button>
-                                            </a>
+                                              {% if annotation.annotated_class == 0 %}
+                                                  ไม่บูลลี่
+                                              {% elif annotation.annotated_class == 1 %}
+                                                  บูลลี่
+                                              {% else %}
+                                                  ไม่ระบุ
+                                              {% endif %}
                                           </td>
+                                          <td>{{ annotation.annotated_type }}</td>
                                       </tr>
                                       {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                                  </tbody>
+                              </table>
+                          </div>
+                          <!-- Back Button -->
+                          <div class="back-btn-container">
+                              <a href="{% url 'userannotatehist' %}">
+                                  <button class="check-btn">ย้อนกลับ</button>
+                              </a>
+                          </div>
                         </div>
                     </div>
                 </div>

@@ -100,7 +100,7 @@
 
             <!-- Navigation Buttons -->
             <div class="nav-buttons d-flex justify-content-between">
-                <a href="../dist/selecteddatasets.html">
+                <a href="{% url 'usersannotating' task_id=task_id current_index=current_index|add:"-1" %}">
                     <button class="nav-btn" id="backBtn">ย้อนกลับ</button>
                 </a>
                 <form method="POST" action="{% url 'confirm_annotation' task_id=task_id current_index=current_index %}">

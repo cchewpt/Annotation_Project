@@ -30,6 +30,7 @@ urlpatterns = [
     path('login/accounts/admin_approved2/<int:user_id>/', views.admin_approved2, name='admin_approved2_with_user_id'),
     path('login/accounts/admin_mng_datasets1/', views.admin_mng_datasets1, name='admin_mng_datasets1'),
     path('login/accounts/userannotatehist/', views.userannotatehist, name='userannotatehist'),
+    path('userannotatehist2/<int:task_id>/', views.userannotatehist2, name='userannotatehist2'),
     path('login/accounts/admin_add_datasets/', views.admin_add_datasets, name='admin_add_datasets'),
     path('login/accounts/admin_add_userText/', views.admin_add_userText, name='admin_add_userText'),
     path('login/accounts/admin_assign_data/<int:task_id>/', views.admin_assign_data, name='admin_assign_data'),
@@ -38,5 +39,6 @@ urlpatterns = [
     path('update_annotation/<int:annotated_id>/', views.update_annotation, name='update_annotation'),
     path('confirm_annotation/<int:task_id>/<int:current_index>/', views.confirm_annotation, name='confirm_annotation'),
     path('login/accounts/admin_kappa/', views.admin_kappa, name='admin_kappa'),
-    path('login/accounts/user_annotated_stat/', views.user_annotated_stat, name='user_annotated_stat')
+    path('login/accounts/user_annotated_stat/', views.user_annotated_stat, name='user_annotated_stat'),
+    path('usersannotating/<int:task_id>/<int:current_index>/', views.usersannotating, name='usersannotating'),
 ]
