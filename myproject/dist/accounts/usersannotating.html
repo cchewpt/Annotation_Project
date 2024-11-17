@@ -1,0 +1,224 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>ระบบการกำกับข้อความเชิงบูลลี่ภาษาไทย</title>
+    <!-- Favicon-->
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
+    <!-- Custom Google font-->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@100;200;300;400;500;600;700;800;900&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Bootstrap icons-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- Core theme CSS (includes Bootstrap)-->
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+</head>
+
+<body class="d-flex flex-column h-100">
+    <main class="flex-shrink-0">
+        <!-- Navigation-->
+        <nav class="navbar navbar-expand-lg navbar-light py-3 bg-greydarker">
+            <div class="container px-5">
+              <a class="navbar-brand" href="index.html">
+                <span class="fw-bolder border-rounded" style="color: black">
+                  ระบบการกำกับข้อความเชิงบูลลี่ภาษาไทย
+                </span>
+              </a>
+              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+              </button>
+              <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
+                  <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'mainlogin' %}">หน้าแรก</a></li>
+                    <li class="nav-item"><a class="nav-link nav-box" href="{% url 'annotatepage' %}">กำกับข้อความ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'txtverify' %}">วิเคราะห์ข้อความ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'texttopost' %}">เสนอข้อความ</a></li>
+                </ul>
+                </ul>
+                <div class="user-profile-box m-lg-0 py-1">
+                  <div class="d-inline-flex align-items-center">
+                      <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
+                          style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
+                          onclick="location.href='{% if user_role == 'admin' %}{% url 'admin_profile' %}{% else %}{% url 'user_profile' %}{% endif %}';" />
+              
+                      <div class="d-md-flex flex-column">
+                          <span class="fw-medium" style="color: black; cursor: pointer">
+                              ชื่อผู้ใช้: {{ username }}
+                          </span>
+                          <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
+                      </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nav>
+        <!--Insert Between Here-->
+        <div class="annotation-page container mt-5">
+            <!-- Title Section -->
+            <h1 class="annotation-title">กำกับข้อความชุด: {{ task_name }}</h1>
+
+            <!-- Left Section with Details and Word -->
+            <div class="annotation-details">
+                <div class="annotation-info">
+                    {% if current_text %}
+                        <p>ข้อความที่ {{ current_index }} จาก {{ annotated_texts.count }} </p> <!-- Show index and total count -->
+                        <div class="annotation-word">"{{ current_text.annotated_text }}"</div> <!-- Display the current annotated text -->
+                    {% else %}
+                        <p>ไม่มีข้อความที่พร้อมให้กำกับ</p> <!-- Message if no words available -->
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Bully and Not Bully Buttons -->
+            <div class="bully-options">
+                <button class="bully-btn" id="bullyBtn">บูลลี่</button>
+                <button class="bully-btn" id="notBullyBtn">ไม่บูลลี่</button>
+            </div>
+            <!-- Bully Type Selection (Initially Disabled) -->
+            <div class="bully-type-section">
+                <p class="bully-type-title">เป็นข้อความประเภทใด</p>
+                <div class="bully-type-options d-flex flex-wrap justify-content-center">
+                    <button class="bully-type" id="bullySexual">บูลลี่ทางเพศสภาพ</button>
+                    <button class="bully-type" id="bullyStatus">บูลลี่ทางฐานะ</button>
+                    <button class="bully-type" id="bullyShape">บูลลี่ทางรูปร่าง</button>
+                    <button class="bully-type" id="bullyFamily">บูลลี่ทางสภาพครอบครัว</button>
+                    <button class="bully-type" id="bullyEmotion">บูลลี่ทางอารมณ์</button>
+                    <button class="bully-type" id="bullyReligion">บูลลี่ด้านศาสนา</button>
+                    <button class="bully-type" id="bullySocial">บูลลี่ทางด้านสังคม</button>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="nav-buttons d-flex justify-content-between">
+                <a href="{% url 'usersannotating' task_id=task_id current_index=current_index|add:"-1" %}">
+                    <button class="nav-btn" id="backBtn">ย้อนกลับ</button>
+                </a>
+                <form method="POST" action="{% url 'confirm_annotation' task_id=task_id current_index=current_index %}">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-btn" id="confirmBtn" data-annotated-id="{{ current_text.annotated_id }}">ยืนยันคำตอบ</button>
+                </form>
+            </div>
+        </div>
+        <!--Insert Between Here-->
+    </main>
+
+    <!-- Footer-->
+    <footer class="bg-purple py-4 mt-auto">
+        <div class="container px-5">
+            <div class="row align-items-center justify-content-between flex-column flex-sm-row">
+                <div class="col-auto">
+                    <div class="small-white m-0">ระบบกำกับและทำนายข้อความเชิงบูลลี่ภาษาไทย &copy;</div>
+                </div>
+                <div class="col-auto">
+                    <a class="small-white">ติดต่อเรา 023342234</a>
+                    <span class="mx-1">&middot;</span>
+                    <a class="small-white">Email : info@thaitextbul.co</a>
+                    <span class="mx-1">&middot;</span>
+                    <a class="small-white">Line : thaitextbul</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap core JS-->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Core theme JS-->
+    <script src="js/scripts.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const bullyBtn = document.getElementById("bullyBtn");
+            const notBullyBtn = document.getElementById("notBullyBtn");
+            const bullyTypeButtons = document.querySelectorAll(".bully-type");
+    
+            // Check if the all_annotations_completed flag is true
+            {% if all_annotations_completed %}
+                alert("คุณได้กำกับข้อความครบทั้งหมดแล้ว!");  // Popup alert message
+            {% endif %}
+    
+            function updateAnnotatedClass(annotatedId, newClass, annotatedType = null) {
+                fetch(`/update_annotated_class/${annotatedId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        'annotated_class': newClass,
+                        'annotated_type': annotatedType
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log("Annotated class and type updated successfully:", data);
+                    } else {
+                        alert("เกิดข้อผิดพลาดในการอัปเดตประเภทข้อความ: " + data.error);
+                        console.error("Error updating annotated class and type:", data.error);
+                    }
+                })
+                .catch(error => {
+                    alert("เกิดข้อผิดพลาดในการเชื่อมต่อ: " + error.message);
+                    console.error("Fetch error:", error);
+                });
+            }
+    
+            // Event listener for the "บูลลี่" button
+            bullyBtn.addEventListener("click", function() {
+                const annotatedId = {{ current_text.annotated_id }};
+                updateAnnotatedClass(annotatedId, 1);
+                bullyBtn.classList.add("active");
+                notBullyBtn.classList.remove("active");
+                console.log("บูลลี่ button clicked. Enabling bully type buttons.");
+    
+                // Enable all bully type buttons and remove disabled class
+                bullyTypeButtons.forEach(button => {
+                    button.classList.remove("disabled");
+                    button.disabled = false;
+                    console.log(`Enabled button: ${button.id}`);
+                });
+            });
+    
+            // Event listener for the "ไม่บูลลี่" button
+            notBullyBtn.addEventListener("click", function() {
+                const annotatedId = {{ current_text.annotated_id }};
+                updateAnnotatedClass(annotatedId, 0, "ไม่บูลลี่");
+                notBullyBtn.classList.add("active");
+                bullyBtn.classList.remove("active");
+                console.log("ไม่บูลลี่ button clicked. Disabling bully type buttons.");
+    
+                // Disable all bully type buttons and add disabled class
+                bullyTypeButtons.forEach(button => {
+                    button.classList.add("disabled");
+                    button.disabled = true;
+                    console.log(`Disabled button: ${button.id}`);
+                });
+            });
+    
+            // Event listener for individual bully-type button clicks
+            bullyTypeButtons.forEach(button => {
+                button.addEventListener("click", function() {
+                    const annotatedId = {{ current_text.annotated_id }};
+                    const annotatedType = this.textContent;  // Get the text of the clicked button
+                    updateAnnotatedClass(annotatedId, 1, annotatedType);
+                    bullyTypeButtons.forEach(btn => btn.classList.remove("active"));
+                    this.classList.add("active");
+                    console.log(`Selected bully type: ${annotatedType}`);
+                });
+            });
+        });
+    </script>
+
+</body>
+
+</html>

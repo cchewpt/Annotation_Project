@@ -110,14 +110,14 @@
                 <i class="bi bi-clock-history me-2"></i> ประวัติการนำเสนอข้อความ
               </button>
               <button
-                class="btn btn-light d-flex align-items-center active"
+                class="btn btn-light d-flex align-items-center"
                 type="button"
                 onclick="location.href='{% url 'userannotatehist' %}';"
               >
                 <i class="bi bi-clock-history me-2"></i> ประวัติการกำกับข้อความ
               </button>
               <button
-                class="btn btn-light d-flex align-items-center"
+                class="btn btn-light d-flex align-items-center  active"
                 type="button"
                 onclick="location.href='{% url 'user_annotated_stat' %}';"
               >
@@ -163,18 +163,45 @@
               </div>
               <div class="row mt-4 justify-content-center">
                 <div class="col-lg-6">
-                  <div class="bg-white p-2 rounded text-center">
-                    <h5 class="text-dark fw-bolder fs-2">{{ proposed_text_count }}</h5>
-                    <p class="text-dark fw-medium">ข้อความที่นำเสนอ</p>
-                  </div>
+                    <div class="bg-white p-2 rounded text-center">
+                        <h5 class="text-dark fw-bolder fs-2">{{ user_task_count }}</h5> 
+                        <p class="text-dark fw-medium">ชุดข้อความที่ได้ทำทั้งหมด</p>
+                    </div>
                 </div>
                 <div class="col-lg-6">
                   <div class="bg-white p-2 rounded text-center">
                     <h5 class="text-dark fw-bolder fs-2">{{ supervised_text_count }}</h5>
-                    <p class="text-dark fw-medium">ข้อความที่ทำการกำกับ</p>
+                    <p class="text-dark fw-medium">ข้อความที่ได้ทำการกำกับ</p>
                   </div>
                 </div>
               </div>
+              <div class="content-history-section">
+                <h3 class="history-title">ประวัติการกำกับข้อความของท่าน</h3>
+                <div class="scroll-box">
+                    <table class="content-table">
+                        <thead>
+                            <tr>
+                                <th>ชุดข้อความ</th>
+                                <th>สถานะ</th>
+                                <th>แก้ไขล่าสุด</th>
+                                <th>วันที่มอบหมาย</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                          {% for task_info in task_status_list %}
+                          <tr>
+                              <td>{{ task_info.task_name }}</td>
+                              <td class="{% if task_info.status == 'ยังไม่เสร็จ' %}not-approved{% else %}approved{% endif %}">
+                                  {{ task_info.status }}
+                              </td>
+                              <td>{{ task_info.latest_assign_date }}</td>
+                              <td>{{ task_info.assign_date }}</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                    </table>
+                </div>
+            </div>
             </div>
           </div>
         </div>

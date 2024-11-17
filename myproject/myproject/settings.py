@@ -89,7 +89,9 @@ DATABASES = {
 }
 
 AUTHENTICATION_BACKENDS = [
-    'users.backends.CustomUserBackend',  # Update this to the correct path  # Keep this if you want to use Django's User model as well
+    'django.contrib.auth.backends.ModelBackend',
+    'users.backends.CustomUserBackend',
+    'users.backends.CustomAdminBackend',  # Update this to the correct path  # Keep this if you want to use Django's User model as well
 ]
 
 # Password validation
@@ -125,7 +127,13 @@ USE_TZ = True
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
-
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'thaiannotatingproject@gmail.com'
+EMAIL_HOST_PASSWORD = 'vlucixdjwuvpkobi'  # Use a secure app-specific password if using Gmail
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -143,4 +151,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/login/'  # URL for login
 LOGIN_REDIRECT_URL = '/accounts/mainlogin/'  # Redirect after login
+
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 

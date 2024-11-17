@@ -47,15 +47,18 @@
           </ul>
           <div class="user-profile-box m-lg-0 py-1">
             <div class="d-inline-flex align-items-center">
-              <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
-                style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
-                onclick="location.href='../dist/user-profile.html';" />
-              <div class="d-md-flex flex-column">
-                <span class="fw-medium" style="color: black; cursor: pointer">ชื่อผู้ใช้: {{ username }}</span>
-                <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
-              </div>
+                <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
+                    style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
+                    onclick="location.href='{% if user_role == 'admin' %}{% url 'admin_profile' %}{% else %}{% url 'user_profile' %}{% endif %}';" />
+        
+                <div class="d-md-flex flex-column">
+                    <span class="fw-medium" style="color: black; cursor: pointer">
+                        ชื่อผู้ใช้: {{ username }}
+                    </span>
+                    <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
+                </div>
             </div>
-          </div>
+        </div>
         </div>
       </div>
     </nav>
@@ -83,14 +86,20 @@
                   {% csrf_token %}
                   <div class="mb-3">
                       <label for="text-input" class="form-label text-white">กรุณากรอกคำที่คุณคิดว่าเป็นการบูลลี่ทางไซเบอร์</label>
-                      <input class="form-control" name="user_proposed_text" type="text" placeholder="กรอกคำที่คุณคิดว่าเป็นบูลลี่..." required/>
+                      <input class="form-control" name="user_proposed_text" id="text-upload" type="text" placeholder="กรอกคำที่คุณคิดว่าเป็นบูลลี่..." required />
                   </div>
                   {% if error_message %}
-                  <div class="alert alert-danger" role="alert">
-                    {{ error_message }}
-                  </div>
+                      <div class="alert alert-danger" role="alert">
+                          {{ error_message }}
+                      </div>
                   {% endif %}
-                  <button id="submit-word-btn" type="submit" class="btn btn-success">ส่งคำ</button>
+                  <button
+                      id="submit-text-btn"
+                      type="submit"
+                      class="btn btn-success"
+                      onclick="return confirmTextSubmission();">
+                      ส่งคำ
+                  </button>
               </form>
             </div>
 
@@ -119,7 +128,17 @@
       </div>
     </div>
   </footer>
-
+  <script>
+    function confirmTextSubmission() {
+        const textInput = document.getElementById('text-upload');
+        if (textInput.value.trim() === '') { // Check if input is empty or whitespace
+            alert('กรุณากรอกคำที่คุณคิดว่าเป็นการบูลลี่ทางไซเบอร์!');
+            return false; // Prevent form submission
+        }
+        alert('ข้อความของคุณถูกส่งเรียบร้อยแล้ว!');
+        return true; // Allow form submission
+    }
+  </script>
   <!-- Bootstrap core JS-->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Core theme JS-->

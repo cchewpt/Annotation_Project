@@ -1,0 +1,126 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>ระบบการกำกับข้อความเชิงบูลลี่ภาษาไทย</title>
+    <!-- Favicon-->
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
+    <!-- Custom Google font-->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@100;200;300;400;500;600;700;800;900&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Bootstrap icons-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- Core theme CSS (includes Bootstrap)-->
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+</head>
+
+<body class="d-flex flex-column h-100">
+    <main class="flex-shrink-0">
+        <!-- Navigation-->
+        <nav class="navbar navbar-expand-lg navbar-light py-3 bg-greydarker">
+            <div class="container px-5">
+              <a class="navbar-brand" href="index.html">
+                <span class="fw-bolder border-rounded" style="color: black">
+                  ระบบการกำกับข้อความเชิงบูลลี่ภาษาไทย
+                </span>
+              </a>
+              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+              </button>
+              <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
+                  <ul class="navbar-nav ms-auto mb-2 mb-lg-0 small fw-bolder">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'mainlogin' %}">หน้าแรก</a></li>
+                    <li class="nav-item"><a class="nav-link nav-box" href="{% url 'annotatepage' %}">กำกับข้อความ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'txtverify' %}">วิเคราะห์ข้อความ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'texttopost' %}">เสนอข้อความ</a></li>
+                </ul>
+                </ul>
+                <div class="user-profile-box m-lg-0 py-1">
+                  <div class="d-inline-flex align-items-center">
+                      <img src="{% static 'assets/profile-placeholder.png' %}" alt="User Picture"
+                          style="width: 40px; height: 40px; cursor: pointer" class="rounded-circle me-2"
+                          onclick="location.href='{% if user_role == 'admin' %}{% url 'admin_profile' %}{% else %}{% url 'user_profile' %}{% endif %}';" />
+              
+                      <div class="d-md-flex flex-column">
+                          <span class="fw-medium" style="color: black; cursor: pointer">
+                              ชื่อผู้ใช้: {{ username }}
+                          </span>
+                          <a href="{% url 'index' %}" class="d-block fw-semibold text-danger">ออกจากระบบ</a>
+                      </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nav>
+
+        <!--เลือกชุดข้อความการกำกับ-->
+        <div class="container my-5 p-4 box-container">
+            <div class="container">
+                <h3>งานที่คุณได้รับมอบหมาย</h3>
+                <div class="row">
+                    {% for task in user_tasks %}
+                        <div class="col-12 mb-4">
+                            <div class="annotate-box d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="fw-bold mb-1">ชื่อชุดข้อความ: {{ task.task.task_name }}</p> <!-- Assuming you have a task_name in the Task model -->
+                                    <p class="mb-1">ข้อความที่กำกับแล้ว {{ supervised_count }}/{{ total_count }}</p> <!-- Adjust as needed -->
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <p class="mb-0 me-6">โดย Admin: {{ task.admin.admin_fname }}</p> <!-- Assuming there's an admin field in UserTask -->
+                                    <p class="mb-0 me-5">ระยะเวลา  {{ task.task.created_date|date:"d F Y" }}  ถึง  {{ task.task.due_date|date:"d F Y" }}</p> <!-- Format date as needed -->
+                                </div>
+                                <div>
+                                    <a href="{% url 'usersannotating' task_id=task.task_id current_index=current_index %}" class="btn btn-primary">กำกับข้อความ</a> <!-- Adjust the URL as needed -->
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p>คุณยังไม่มีงานที่ได้รับมอบหมาย</p>
+                    {% endfor %}
+                </div>
+            </div>
+            <!-- History button -->
+            <div class="text-end mt-4">
+                <a onclick="location.href='{% url 'userannotatehist' %}';" class="btn btn-secondary">ประวัติการกำกับข้อความ</a>
+            </div>
+        </div>
+        <!--เลือกชุดข้อความการกำกับ-->
+
+    </main>
+
+    <!-- Footer-->
+    <footer class="bg-purple py-4 mt-auto">
+        <div class="container px-5">
+            <div class="row align-items-center justify-content-between flex-column flex-sm-row">
+                <div class="col-auto">
+                    <div class="small-white m-0">ระบบกำกับและทำนายข้อความเชิงบูลลี่ภาษาไทย &copy;</div>
+                </div>
+                <div class="col-auto">
+                    <a class="small-white">ติดต่อเรา 023342234</a>
+                    <span class="mx-1">&middot;</span>
+                    <a class="small-white">Email : info@thaitextbul.co</a>
+                    <span class="mx-1">&middot;</span>
+                    <a class="small-white">Line : thaitextbul</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap core JS-->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Core theme JS-->
+    <script src="js/scripts.js"></script>
+</body>
+
+</html>
